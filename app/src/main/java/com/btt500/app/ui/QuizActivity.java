@@ -1,10 +1,13 @@
 package com.btt500.app.ui;
 
 import android.content.Intent;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.graphics.drawable.GradientDrawable;
 import android.os.Bundle;
 import android.view.View;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.TextView;
@@ -17,6 +20,7 @@ import com.btt500.app.data.QuestionRepository;
 import com.btt500.app.data.QuizSession;
 import com.google.android.material.button.MaterialButton;
 
+import java.io.InputStream;
 import java.util.List;
 
 public class QuizActivity extends AppCompatActivity {
@@ -32,6 +36,7 @@ public class QuizActivity extends AppCompatActivity {
     private boolean answered = false;
 
     private TextView tvProgress, tvScore, tvQuestion, tvQuestionEn, tvFeedback, tvCorrectAnswer;
+    private ImageView ivQuestionImage;
     private LinearLayout layoutOptions;
     private ProgressBar progressBar;
     private MaterialButton btnNext;
@@ -47,6 +52,7 @@ public class QuizActivity extends AppCompatActivity {
         tvQuestionEn = findViewById(R.id.tvQuestionEn);
         tvFeedback = findViewById(R.id.tvFeedback);
         tvCorrectAnswer = findViewById(R.id.tvCorrectAnswer);
+        ivQuestionImage = findViewById(R.id.ivQuestionImage);
         layoutOptions = findViewById(R.id.layoutOptions);
         progressBar = findViewById(R.id.progressBar);
         btnNext = findViewById(R.id.btnNext);
@@ -57,19 +63,16 @@ public class QuizActivity extends AppCompatActivity {
         int questionCount = getIntent().getIntExtra(EXTRA_QUESTION_COUNT, 50);
 
         if (sessionId > 0) {
-            // Resume existing session
             session = repo.getSessionById(sessionId);
         }
 
         if (session == null) {
-            // Create new session
             session = repo.createSession(questionCount);
         }
 
         questions = repo.getSessionQuestions(session);
         sessionResults = repo.getSessionResults(session);
 
-        // Find the first unanswered question
         currentIndex = 0;
         for (int i = 0; i < sessionResults.size(); i++) {
             if ("-".equals(sessionResults.get(i))) {
@@ -81,10 +84,8 @@ public class QuizActivity extends AppCompatActivity {
         progressBar.setMax(session.totalQuestions);
 
         btnNext.setOnClickListener(v -> {
-            // Find next unanswered question
             int nextIndex = findNextUnanswered(currentIndex + 1);
             if (nextIndex < 0) {
-                // All answered, show result
                 showResult();
             } else {
                 currentIndex = nextIndex;
@@ -96,14 +97,13 @@ public class QuizActivity extends AppCompatActivity {
     }
 
     private int findNextUnanswered(int startFrom) {
-        // Refresh session results
         sessionResults = repo.getSessionResults(session);
         for (int i = startFrom; i < sessionResults.size(); i++) {
             if ("-".equals(sessionResults.get(i))) {
                 return i;
             }
         }
-        return -1; // All answered
+        return -1;
     }
 
     private void showQuestion() {
@@ -123,6 +123,9 @@ public class QuizActivity extends AppCompatActivity {
         } else {
             tvQuestionEn.setVisibility(View.GONE);
         }
+
+        // Show question image if available
+        loadQuestionImage(q);
 
         tvFeedback.setVisibility(View.GONE);
         tvCorrectAnswer.setVisibility(View.GONE);
@@ -165,6 +168,28 @@ public class QuizActivity extends AppCompatActivity {
         }
     }
 
+    /**
+     * Load and display the question image from assets.
+     */
+    private void loadQuestionImage(Question q) {
+        if (q.images != null && !q.images.isEmpty()) {
+            String imageName = q.images.get(0);
+            try {
+                InputStream is = getAssets().open("images/" + imageName);
+                Bitmap bitmap = BitmapFactory.decodeStream(is);
+                is.close();
+                if (bitmap != null) {
+                    ivQuestionImage.setImageBitmap(bitmap);
+                    ivQuestionImage.setVisibility(View.VISIBLE);
+                    return;
+                }
+            } catch (Exception e) {
+                // Image not found or failed to load
+            }
+        }
+        ivQuestionImage.setVisibility(View.GONE);
+    }
+
     private void onOptionSelected(int selectedIndex) {
         if (answered) return;
         answered = true;
@@ -172,12 +197,9 @@ public class QuizActivity extends AppCompatActivity {
         Question q = questions.get(currentIndex);
         boolean isCorrect = (selectedIndex == q.correct_answer);
 
-        // Record answer in session
         repo.recordSessionAnswer(session, currentIndex, isCorrect);
-        // Refresh session from DB
         session = repo.getSessionById(session.id);
 
-        // Update feedback
         tvFeedback.setVisibility(View.VISIBLE);
         if (isCorrect) {
             tvFeedback.setText(R.string.correct);
@@ -189,7 +211,6 @@ public class QuizActivity extends AppCompatActivity {
             tvCorrectAnswer.setVisibility(View.VISIBLE);
         }
 
-        // Highlight options
         for (int i = 0; i < layoutOptions.getChildCount(); i++) {
             TextView optView = (TextView) layoutOptions.getChildAt(i);
             GradientDrawable bg = new GradientDrawable();
@@ -209,13 +230,11 @@ public class QuizActivity extends AppCompatActivity {
             optView.setOnClickListener(null);
         }
 
-        // Update score display
         tvScore.setText(session.correctCount + " ✓");
         tvProgress.setText(getString(R.string.question_progress,
                 session.answeredCount, session.totalQuestions));
         progressBar.setProgress(session.answeredCount);
 
-        // Show next button
         btnNext.setVisibility(View.VISIBLE);
         if (session.isCompleted) {
             btnNext.setText(R.string.finish);

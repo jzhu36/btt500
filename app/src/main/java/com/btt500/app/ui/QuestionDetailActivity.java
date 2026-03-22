@@ -1,9 +1,12 @@
 package com.btt500.app.ui;
 
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.graphics.drawable.GradientDrawable;
 import android.os.Bundle;
 import android.view.View;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
@@ -15,6 +18,7 @@ import com.btt500.app.data.Question;
 import com.btt500.app.data.QuestionRepository;
 import com.google.android.material.button.MaterialButton;
 
+import java.io.InputStream;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
@@ -52,6 +56,25 @@ public class QuestionDetailActivity extends AppCompatActivity {
             tvQuestionEn.setVisibility(View.VISIBLE);
         } else {
             tvQuestionEn.setVisibility(View.GONE);
+        }
+
+        // Question image
+        ImageView ivDetailImage = findViewById(R.id.ivDetailImage);
+        if (q.images != null && !q.images.isEmpty()) {
+            String imageName = q.images.get(0);
+            try {
+                InputStream is = getAssets().open("images/" + imageName);
+                Bitmap bitmap = BitmapFactory.decodeStream(is);
+                is.close();
+                if (bitmap != null) {
+                    ivDetailImage.setImageBitmap(bitmap);
+                    ivDetailImage.setVisibility(View.VISIBLE);
+                }
+            } catch (Exception e) {
+                ivDetailImage.setVisibility(View.GONE);
+            }
+        } else {
+            ivDetailImage.setVisibility(View.GONE);
         }
 
         // Options with correct highlighted
