@@ -11,9 +11,10 @@
     <string name="question_progress">第 %1$d / %2$d 题</string>
     <string name="retry">再来一次</string>
     <string name="back_home">返回首页</string>
-    <string name="sort_least_practiced">按练习次数 ↑</string>
-    <string name="sort_most_wrong">按错误次数 ↓</string>
-    <string name="sort_default">默认排序</string>
+    <string name="sort_default">默认</string>
+    <string name="sort_least_practiced">练习次数</string>
+    <string name="sort_most_wrong">错误次数</string>
+    <string name="sort_topic">题目种类</string>
     <string name="practiced_times">练习 %1$d 次</string>
     <string name="wrong_times">错误 %1$d 次</string>
     <string name="total_questions">题库共 %1$d 题</string>
@@ -23,4 +24,6 @@
     <string name="all_records">全部记录</string>
     <string name="recent_records">最近十次</string>
     <string name="correct_answer">正确答案: %1$s</string>
+    <string name="filter_all">全部</string>
+    <string name="filter_recent_wrong">最近做错</string>
 </resources>

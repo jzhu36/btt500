@@ -30,11 +30,10 @@ public class ResultActivity extends AppCompatActivity {
 
         tvDetail.setText("正确率: " + percentage + "%");
 
-        // BTT pass mark is 90% (45/50)
         boolean passed = percentage >= 90;
         if (passed) {
             tvScore.setTextColor(getResources().getColor(R.color.correct_green, null));
-            tvPassFail.setText("通过! 🎉");
+            tvPassFail.setText("通过!");
             tvPassFail.setTextColor(getResources().getColor(R.color.correct_green, null));
         } else {
             tvScore.setTextColor(getResources().getColor(R.color.wrong_red, null));
@@ -43,19 +42,26 @@ public class ResultActivity extends AppCompatActivity {
         }
 
         btnRetry.setOnClickListener(v -> {
-            startActivity(new Intent(this, QuizActivity.class));
+            // Go back to main to start a new session
+            Intent intent = new Intent(this, MainActivity.class);
+            intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
+            startActivity(intent);
             finish();
         });
 
         btnHome.setOnClickListener(v -> {
-            startActivity(new Intent(this, MainActivity.class));
+            Intent intent = new Intent(this, MainActivity.class);
+            intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
+            startActivity(intent);
             finish();
         });
     }
 
     @Override
     public void onBackPressed() {
-        startActivity(new Intent(this, MainActivity.class));
+        Intent intent = new Intent(this, MainActivity.class);
+        intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
+        startActivity(intent);
         finish();
     }
 }

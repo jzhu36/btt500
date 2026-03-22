@@ -14,29 +14,27 @@ import androidx.appcompat.app.AppCompatActivity;
 import com.btt500.app.R;
 import com.btt500.app.data.Question;
 import com.btt500.app.data.QuestionRepository;
+import com.btt500.app.data.QuizSession;
 import com.google.android.material.button.MaterialButton;
 
-import java.util.ArrayList;
 import java.util.List;
 
 public class QuizActivity extends AppCompatActivity {
 
-    private static final int TOTAL_QUESTIONS = 50;
+    public static final String EXTRA_SESSION_ID = "session_id";
+    public static final String EXTRA_QUESTION_COUNT = "question_count";
 
     private QuestionRepository repo;
+    private QuizSession session;
     private List<Question> questions;
+    private List<String> sessionResults;
     private int currentIndex = 0;
-    private int correctCount = 0;
     private boolean answered = false;
 
     private TextView tvProgress, tvScore, tvQuestion, tvQuestionEn, tvFeedback, tvCorrectAnswer;
     private LinearLayout layoutOptions;
     private ProgressBar progressBar;
     private MaterialButton btnNext;
-
-    // Track results for the result screen
-    private ArrayList<String> questionIds = new ArrayList<>();
-    private ArrayList<Boolean> results = new ArrayList<>();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -54,15 +52,42 @@ public class QuizActivity extends AppCompatActivity {
         btnNext = findViewById(R.id.btnNext);
 
         repo = new QuestionRepository(this);
-        questions = repo.selectQuestions(TOTAL_QUESTIONS);
 
-        progressBar.setMax(TOTAL_QUESTIONS);
+        long sessionId = getIntent().getLongExtra(EXTRA_SESSION_ID, -1);
+        int questionCount = getIntent().getIntExtra(EXTRA_QUESTION_COUNT, 50);
+
+        if (sessionId > 0) {
+            // Resume existing session
+            session = repo.getSessionById(sessionId);
+        }
+
+        if (session == null) {
+            // Create new session
+            session = repo.createSession(questionCount);
+        }
+
+        questions = repo.getSessionQuestions(session);
+        sessionResults = repo.getSessionResults(session);
+
+        // Find the first unanswered question
+        currentIndex = 0;
+        for (int i = 0; i < sessionResults.size(); i++) {
+            if ("-".equals(sessionResults.get(i))) {
+                currentIndex = i;
+                break;
+            }
+        }
+
+        progressBar.setMax(session.totalQuestions);
 
         btnNext.setOnClickListener(v -> {
-            currentIndex++;
-            if (currentIndex >= questions.size()) {
+            // Find next unanswered question
+            int nextIndex = findNextUnanswered(currentIndex + 1);
+            if (nextIndex < 0) {
+                // All answered, show result
                 showResult();
             } else {
+                currentIndex = nextIndex;
                 showQuestion();
             }
         });
@@ -70,13 +95,25 @@ public class QuizActivity extends AppCompatActivity {
         showQuestion();
     }
 
+    private int findNextUnanswered(int startFrom) {
+        // Refresh session results
+        sessionResults = repo.getSessionResults(session);
+        for (int i = startFrom; i < sessionResults.size(); i++) {
+            if ("-".equals(sessionResults.get(i))) {
+                return i;
+            }
+        }
+        return -1; // All answered
+    }
+
     private void showQuestion() {
         answered = false;
         Question q = questions.get(currentIndex);
 
-        tvProgress.setText(getString(R.string.question_progress, currentIndex + 1, questions.size()));
-        tvScore.setText(correctCount + " ✓");
-        progressBar.setProgress(currentIndex);
+        tvProgress.setText(getString(R.string.question_progress,
+                session.answeredCount + 1, session.totalQuestions));
+        tvScore.setText(session.correctCount + " ✓");
+        progressBar.setProgress(session.answeredCount);
 
         tvQuestion.setText(q.getDisplayQuestion());
 
@@ -102,7 +139,6 @@ public class QuizActivity extends AppCompatActivity {
             TextView optionView = new TextView(this);
             String label = (i < labels.length) ? labels[i] + ". " : "";
 
-            // Show both Chinese and English options
             String displayText = label + options.get(i);
             if (q.options_en != null && i < q.options_en.size() && q.options_en.get(i) != null) {
                 displayText += "\n" + q.options_en.get(i);
@@ -136,14 +172,10 @@ public class QuizActivity extends AppCompatActivity {
         Question q = questions.get(currentIndex);
         boolean isCorrect = (selectedIndex == q.correct_answer);
 
-        if (isCorrect) {
-            correctCount++;
-        }
-
-        // Record answer
-        repo.recordAnswer(q.id, isCorrect);
-        questionIds.add(q.id);
-        results.add(isCorrect);
+        // Record answer in session
+        repo.recordSessionAnswer(session, currentIndex, isCorrect);
+        // Refresh session from DB
+        session = repo.getSessionById(session.id);
 
         // Update feedback
         tvFeedback.setVisibility(View.VISIBLE);
@@ -177,39 +209,41 @@ public class QuizActivity extends AppCompatActivity {
             optView.setOnClickListener(null);
         }
 
+        // Update score display
+        tvScore.setText(session.correctCount + " ✓");
+        tvProgress.setText(getString(R.string.question_progress,
+                session.answeredCount, session.totalQuestions));
+        progressBar.setProgress(session.answeredCount);
+
         // Show next button
         btnNext.setVisibility(View.VISIBLE);
-        if (currentIndex >= questions.size() - 1) {
+        if (session.isCompleted) {
             btnNext.setText(R.string.finish);
         } else {
             btnNext.setText(R.string.next_question);
         }
-
-        tvScore.setText(correctCount + " ✓");
     }
 
     private void showResult() {
         Intent intent = new Intent(this, ResultActivity.class);
-        intent.putExtra("correct", correctCount);
-        intent.putExtra("total", questions.size());
-        intent.putStringArrayListExtra("questionIds", questionIds);
-        ArrayList<String> resultStrings = new ArrayList<>();
-        for (Boolean b : results) {
-            resultStrings.add(b.toString());
-        }
-        intent.putStringArrayListExtra("results", resultStrings);
+        intent.putExtra("session_id", session.id);
+        intent.putExtra("correct", session.correctCount);
+        intent.putExtra("total", session.totalQuestions);
         startActivity(intent);
         finish();
     }
 
     @Override
     public void onBackPressed() {
-        // Confirm exit
-        new androidx.appcompat.app.AlertDialog.Builder(this)
-                .setTitle("退出练习")
-                .setMessage("确定要退出吗？当前进度将不会保存。")
-                .setPositiveButton("退出", (d, w) -> finish())
-                .setNegativeButton("继续", null)
-                .show();
+        if (session != null && !session.isCompleted) {
+            new androidx.appcompat.app.AlertDialog.Builder(this)
+                    .setTitle("暂停练习")
+                    .setMessage("进度已自动保存，下次可以继续。")
+                    .setPositiveButton("退出", (d, w) -> finish())
+                    .setNegativeButton("继续", null)
+                    .show();
+        } else {
+            finish();
+        }
     }
 }
