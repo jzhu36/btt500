@@ -7,6 +7,7 @@
     android:layout_marginBottom="8dp"
     android:background="@drawable/item_bg">
 
+    <!-- Question text -->
     <TextView
         android:id="@+id/tvItemQuestion"
         android:layout_width="match_parent"
@@ -16,35 +17,28 @@
         android:maxLines="2"
         android:ellipsize="end" />
 
+    <!-- Topic tag -->
+    <TextView
+        android:id="@+id/tvItemTopic"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textSize="11sp"
+        android:textColor="@color/white"
+        android:background="@drawable/topic_tag_bg"
+        android:paddingStart="8dp"
+        android:paddingEnd="8dp"
+        android:paddingTop="2dp"
+        android:paddingBottom="2dp"
+        android:layout_marginTop="6dp"
+        android:visibility="gone" />
+
+    <!-- History icons row: ✓ and ✗ icons -->
     <LinearLayout
+        android:id="@+id/layoutHistoryIcons"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        android:layout_marginTop="6dp">
+        android:layout_marginTop="6dp"
+        android:gravity="center_vertical" />
 
-        <TextView
-            android:id="@+id/tvItemAttempts"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:textSize="13sp"
-            android:textColor="@color/primary"
-            android:layout_marginEnd="16dp" />
-
-        <TextView
-            android:id="@+id/tvItemWrongs"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:textSize="13sp"
-            android:textColor="@color/wrong_red"
-            android:layout_marginEnd="16dp" />
-
-        <TextView
-            android:id="@+id/tvItemTopic"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:textSize="12sp"
-            android:textColor="@color/medium_gray"
-            android:gravity="end" />
-    </LinearLayout>
 </LinearLayout>
