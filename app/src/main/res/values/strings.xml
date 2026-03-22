@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">BTT500</string>
+    <string name="start_quiz">开始练习</string>
+    <string name="view_history">题目记录</string>
+    <string name="next_question">下一题</string>
+    <string name="finish">完成</string>
+    <string name="correct">正确!</string>
+    <string name="incorrect">错误!</string>
+    <string name="score_text">得分: %1$d / %2$d</string>
+    <string name="question_progress">第 %1$d / %2$d 题</string>
+    <string name="retry">再来一次</string>
+    <string name="back_home">返回首页</string>
+    <string name="sort_least_practiced">按练习次数 ↑</string>
+    <string name="sort_most_wrong">按错误次数 ↓</string>
+    <string name="sort_default">默认排序</string>
+    <string name="practiced_times">练习 %1$d 次</string>
+    <string name="wrong_times">错误 %1$d 次</string>
+    <string name="total_questions">题库共 %1$d 题</string>
+    <string name="no_history">暂无答题记录</string>
+    <string name="question_detail">题目详情</string>
+    <string name="history_records">答题记录</string>
+    <string name="all_records">全部记录</string>
+    <string name="recent_records">最近十次</string>
+    <string name="correct_answer">正确答案: %1$s</string>
+</resources>
