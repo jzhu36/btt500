@@ -85,19 +85,28 @@ public class QuestionRepository {
     /**
      * Select questions using weighted random sampling.
      * Questions whose most recent answer was WRONG get 5x weight.
-     * All other questions (never attempted, or last answer correct) get 1x weight.
+     * Questions never attempted get 5x weight.
+     * All other questions (last answer correct) get 1x weight.
      */
     public List<Question> selectQuestions(int count) {
         // Find which questions were last answered incorrectly
         Set<String> lastWrongIds = getRecentlyWrongQuestionIds();
 
+        // Find which questions have been attempted at least once
+        Set<String> attemptedIds = new HashSet<>(dao.getAllAttemptedQuestionIds());
+
         // Build weighted list: each question gets a weight
-        // lastWrong -> weight 5, others -> weight 1
+        // lastWrong -> weight 5, never attempted -> weight 5, others -> weight 1
         List<Question> pool = new ArrayList<>(allQuestions);
         double[] weights = new double[pool.size()];
         double totalWeight = 0;
         for (int i = 0; i < pool.size(); i++) {
-            weights[i] = lastWrongIds.contains(pool.get(i).id) ? 5.0 : 1.0;
+            String qid = pool.get(i).id;
+            if (lastWrongIds.contains(qid) || !attemptedIds.contains(qid)) {
+                weights[i] = 5.0;
+            } else {
+                weights[i] = 1.0;
+            }
             totalWeight += weights[i];
         }
 
