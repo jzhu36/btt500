@@ -147,8 +147,8 @@ public class QuizActivity extends AppCompatActivity {
                 displayText += "\n" + q.options_en.get(i);
             }
             optionView.setText(displayText);
-            optionView.setTextSize(16);
-            optionView.setPadding(24, 20, 24, 20);
+            optionView.setTextSize(18);
+            optionView.setPadding(28, 24, 28, 24);
 
             GradientDrawable bg = new GradientDrawable();
             bg.setCornerRadius(12);

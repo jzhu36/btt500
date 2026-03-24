@@ -90,8 +90,8 @@ public class QuestionDetailActivity extends AppCompatActivity {
                     text += "\n" + q.options_en.get(i);
                 }
                 optView.setText(text);
-                optView.setTextSize(15);
-                optView.setPadding(20, 16, 20, 16);
+                optView.setTextSize(18);
+                optView.setPadding(24, 20, 24, 20);
 
                 GradientDrawable bg = new GradientDrawable();
                 bg.setCornerRadius(10);
