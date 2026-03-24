@@ -83,59 +83,48 @@ public class QuestionRepository {
     }
 
     /**
-     * Select questions with priority:
-     * 1. Questions answered incorrectly before (highest priority)
-     * 2. Questions never attempted
-     * 3. Questions with fewest attempts
+     * Select questions using weighted random sampling.
+     * Questions whose most recent answer was WRONG get 5x weight.
+     * All other questions (never attempted, or last answer correct) get 1x weight.
      */
     public List<Question> selectQuestions(int count) {
-        List<QuestionAttemptCount> attemptCounts = dao.getAttemptCounts();
-        List<QuestionAttemptCount> wrongCounts = dao.getWrongCounts();
+        // Find which questions were last answered incorrectly
+        Set<String> lastWrongIds = getRecentlyWrongQuestionIds();
 
-        Map<String, Integer> attemptMap = new HashMap<>();
-        for (QuestionAttemptCount ac : attemptCounts) {
-            attemptMap.put(ac.questionId, ac.cnt);
+        // Build weighted list: each question gets a weight
+        // lastWrong -> weight 5, others -> weight 1
+        List<Question> pool = new ArrayList<>(allQuestions);
+        double[] weights = new double[pool.size()];
+        double totalWeight = 0;
+        for (int i = 0; i < pool.size(); i++) {
+            weights[i] = lastWrongIds.contains(pool.get(i).id) ? 5.0 : 1.0;
+            totalWeight += weights[i];
         }
 
-        Map<String, Integer> wrongMap = new HashMap<>();
-        for (QuestionAttemptCount wc : wrongCounts) {
-            wrongMap.put(wc.questionId, wc.cnt);
-        }
-
-        List<Question> wrongQuestions = new ArrayList<>();
-        List<Question> neverAttempted = new ArrayList<>();
-        List<Question> attempted = new ArrayList<>();
-
-        for (Question q : allQuestions) {
-            int wrongs = wrongMap.getOrDefault(q.id, 0);
-            int attempts = attemptMap.getOrDefault(q.id, 0);
-
-            if (wrongs > 0) {
-                wrongQuestions.add(q);
-            } else if (attempts == 0) {
-                neverAttempted.add(q);
-            } else {
-                attempted.add(q);
-            }
-        }
-
-        Collections.shuffle(wrongQuestions);
-        Collections.shuffle(neverAttempted);
-
-        attempted.sort((a, b) -> {
-            int attA = attemptMap.getOrDefault(a.id, 0);
-            int attB = attemptMap.getOrDefault(b.id, 0);
-            return Integer.compare(attA, attB);
-        });
-
+        // Weighted random sampling without replacement
         List<Question> result = new ArrayList<>();
-        result.addAll(wrongQuestions);
-        result.addAll(neverAttempted);
-        result.addAll(attempted);
+        java.util.Random random = new java.util.Random();
+        int remaining = Math.min(count, pool.size());
 
-        if (result.size() > count) {
-            result = new ArrayList<>(result.subList(0, count));
+        for (int picked = 0; picked < remaining; picked++) {
+            double r = random.nextDouble() * totalWeight;
+            double cumulative = 0;
+            int selectedIdx = pool.size() - 1; // fallback
+            for (int i = 0; i < pool.size(); i++) {
+                if (weights[i] <= 0) continue;
+                cumulative += weights[i];
+                if (cumulative >= r) {
+                    selectedIdx = i;
+                    break;
+                }
+            }
+            result.add(pool.get(selectedIdx));
+            // Remove selected from future picks
+            totalWeight -= weights[selectedIdx];
+            weights[selectedIdx] = 0;
         }
+
+        // Shuffle the final selection so the order is random
         Collections.shuffle(result);
         return result;
     }
