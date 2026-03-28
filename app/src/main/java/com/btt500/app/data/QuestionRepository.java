@@ -84,9 +84,9 @@ public class QuestionRepository {
 
     /**
      * Select questions using weighted random sampling.
-     * Questions whose most recent answer was WRONG get 5x weight.
+     * Questions whose most recent OR second most recent answer was WRONG get 5x weight.
      * Questions never attempted get 5x weight.
-     * All other questions (last answer correct) get 1x weight.
+     * All other questions (last two answers both correct) get 1x weight.
      */
     public List<Question> selectQuestions(int count) {
         // Find which questions were last answered incorrectly
@@ -333,21 +333,27 @@ public class QuestionRepository {
     }
 
     /**
-     * Get question IDs that were answered incorrectly recently (in the last N records).
+     * Get question IDs that should receive 5x weight.
+     * A question qualifies if its most recent answer OR second most recent answer was wrong.
      */
     public Set<String> getRecentlyWrongQuestionIds() {
         List<AnswerRecord> allRecords = dao.getAllRecords();
-        // Group by question, check if the most recent answer was wrong
-        Map<String, Boolean> lastAnswerWrong = new HashMap<>();
+        // Group by question: collect the two most recent results per question
         // allRecords is ordered by timestamp DESC, so first occurrence per question is the latest
+        Map<String, List<Boolean>> recentResults = new HashMap<>();
         for (AnswerRecord r : allRecords) {
-            if (!lastAnswerWrong.containsKey(r.questionId)) {
-                lastAnswerWrong.put(r.questionId, !r.isCorrect);
+            List<Boolean> results = recentResults.computeIfAbsent(r.questionId, k -> new ArrayList<>());
+            if (results.size() < 2) {
+                results.add(r.isCorrect);
             }
         }
         Set<String> result = new HashSet<>();
-        for (Map.Entry<String, Boolean> entry : lastAnswerWrong.entrySet()) {
-            if (entry.getValue()) {
+        for (Map.Entry<String, List<Boolean>> entry : recentResults.entrySet()) {
+            List<Boolean> results = entry.getValue();
+            // 5x if last answer was wrong, OR second-to-last answer was wrong
+            boolean lastWrong = !results.get(0);
+            boolean secondLastWrong = results.size() > 1 && !results.get(1);
+            if (lastWrong || secondLastWrong) {
                 result.add(entry.getKey());
             }
         }
