@@ -41,8 +41,7 @@
 
     <ScrollView
         android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1"
+        android:layout_height="match_parent"
         android:fillViewport="true">
 
         <LinearLayout
@@ -66,7 +65,7 @@
                 android:id="@+id/tvQuestionEn"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:textSize="14sp"
+                android:textSize="16sp"
                 android:textColor="@color/medium_gray"
                 android:lineSpacingExtra="2dp"
                 android:layout_marginBottom="8dp" />
@@ -109,17 +108,17 @@
                 android:layout_marginTop="8dp"
                 android:visibility="gone" />
 
+            <!-- Next button (dynamic position, right after feedback) -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnNext"
+                android:layout_width="match_parent"
+                android:layout_height="56dp"
+                android:layout_marginTop="16dp"
+                android:text="@string/next_question"
+                android:textSize="16sp"
+                android:visibility="gone" />
+
         </LinearLayout>
     </ScrollView>
-
-    <!-- Bottom button -->
-    <com.google.android.material.button.MaterialButton
-        android:id="@+id/btnNext"
-        android:layout_width="match_parent"
-        android:layout_height="56dp"
-        android:layout_margin="16dp"
-        android:text="@string/next_question"
-        android:textSize="16sp"
-        android:visibility="gone" />
 
 </LinearLayout>
