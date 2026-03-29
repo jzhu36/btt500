@@ -360,6 +360,111 @@ public class QuestionRepository {
         return result;
     }
 
+    // ==================== Filtered Selection Methods ====================
+
+    /**
+     * Get questions whose most recent OR second most recent answer was wrong.
+     * Returns shuffled list.
+     */
+    public List<Question> getRecentlyWrongQuestions() {
+        Set<String> wrongIds = getRecentlyWrongQuestionIds();
+        List<Question> result = new ArrayList<>();
+        for (Question q : allQuestions) {
+            if (wrongIds.contains(q.id)) {
+                result.add(q);
+            }
+        }
+        Collections.shuffle(result);
+        return result;
+    }
+
+    /**
+     * Get questions that contain numbers (digits) in the question text or any option.
+     * Checks both Chinese and English text.
+     * Returns shuffled list.
+     */
+    public List<Question> getQuestionsWithNumbers() {
+        List<Question> result = new ArrayList<>();
+        for (Question q : allQuestions) {
+            if (containsDigit(q.question_zh) || containsDigit(q.question_en)) {
+                result.add(q);
+                continue;
+            }
+            boolean found = false;
+            if (q.options_zh != null) {
+                for (String opt : q.options_zh) {
+                    if (containsDigit(opt)) { found = true; break; }
+                }
+            }
+            if (!found && q.options_en != null) {
+                for (String opt : q.options_en) {
+                    if (containsDigit(opt)) { found = true; break; }
+                }
+            }
+            if (found) result.add(q);
+        }
+        Collections.shuffle(result);
+        return result;
+    }
+
+    private boolean containsDigit(String s) {
+        if (s == null) return false;
+        for (char c : s.toCharArray()) {
+            if (Character.isDigit(c)) return true;
+        }
+        return false;
+    }
+
+    /**
+     * Get questions that have never been attempted.
+     * Returns shuffled list.
+     */
+    public List<Question> getUnattemptedQuestions() {
+        Set<String> attemptedIds = new HashSet<>(dao.getAllAttemptedQuestionIds());
+        List<Question> result = new ArrayList<>();
+        for (Question q : allQuestions) {
+            if (!attemptedIds.contains(q.id)) {
+                result.add(q);
+            }
+        }
+        Collections.shuffle(result);
+        return result;
+    }
+
+    /**
+     * Create a session from a pre-selected list of questions.
+     * Used for filtered/custom quiz modes.
+     */
+    public QuizSession createSessionFromList(List<Question> selected) {
+        if (selected == null || selected.isEmpty()) return null;
+
+        QuizSession session = new QuizSession();
+        session.totalQuestions = selected.size();
+        session.answeredCount = 0;
+        session.correctCount = 0;
+        session.isCompleted = false;
+        session.createdAt = System.currentTimeMillis();
+        session.completedAt = 0;
+
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < selected.size(); i++) {
+            if (i > 0) sb.append(",");
+            sb.append(selected.get(i).id);
+        }
+        session.questionIdsCsv = sb.toString();
+
+        StringBuilder resSb = new StringBuilder();
+        for (int i = 0; i < selected.size(); i++) {
+            if (i > 0) resSb.append(",");
+            resSb.append("-");
+        }
+        session.resultsCsv = resSb.toString();
+
+        long id = sessionDao.insert(session);
+        session.id = id;
+        return session;
+    }
+
     public static class QuestionStat {
         public Question question;
         public int attemptCount;
