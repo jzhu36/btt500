@@ -9,10 +9,12 @@ import android.view.Gravity;
 import android.view.View;
 import android.widget.LinearLayout;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.btt500.app.R;
+import com.btt500.app.data.Question;
 import com.btt500.app.data.QuestionRepository;
 import com.btt500.app.data.QuizSession;
 import com.google.android.material.button.MaterialButton;
@@ -39,6 +41,9 @@ public class MainActivity extends AppCompatActivity {
         MaterialButton btnStart20 = findViewById(R.id.btnStart20);
         MaterialButton btnStart50 = findViewById(R.id.btnStart50);
         MaterialButton btnHistory = findViewById(R.id.btnHistory);
+        MaterialButton btnRecentWrong = findViewById(R.id.btnRecentWrong);
+        MaterialButton btnWithNumbers = findViewById(R.id.btnWithNumbers);
+        MaterialButton btnUnattempted = findViewById(R.id.btnUnattempted);
         TextView tvTotal = findViewById(R.id.tvTotalQuestions);
         layoutResumeCard = findViewById(R.id.layoutResumeCard);
         layoutSessionHistory = findViewById(R.id.layoutSessionHistory);
@@ -50,6 +55,10 @@ public class MainActivity extends AppCompatActivity {
         btnStart20.setOnClickListener(v -> startNewSession(20));
         btnStart50.setOnClickListener(v -> startNewSession(50));
 
+        btnRecentWrong.setOnClickListener(v -> startFilteredQuiz("recent_wrong"));
+        btnWithNumbers.setOnClickListener(v -> startFilteredQuiz("with_numbers"));
+        btnUnattempted.setOnClickListener(v -> startFilteredQuiz("unattempted"));
+
         btnHistory.setOnClickListener(v -> {
             startActivity(new Intent(this, HistoryActivity.class));
         });
@@ -60,12 +69,60 @@ public class MainActivity extends AppCompatActivity {
         super.onResume();
         refreshResumeCard();
         refreshSessionHistory();
+        updateFilterButtonCounts();
     }
 
     private void startNewSession(int count) {
         Intent intent = new Intent(this, QuizActivity.class);
         intent.putExtra(QuizActivity.EXTRA_QUESTION_COUNT, count);
         startActivity(intent);
+    }
+
+    private void startFilteredQuiz(String filterMode) {
+        List<Question> questions;
+        String label;
+        switch (filterMode) {
+            case "recent_wrong":
+                questions = repo.getRecentlyWrongQuestions();
+                label = "最近做错的题";
+                break;
+            case "with_numbers":
+                questions = repo.getQuestionsWithNumbers();
+                label = "含数字的题";
+                break;
+            case "unattempted":
+                questions = repo.getUnattemptedQuestions();
+                label = "没做过的题";
+                break;
+            default:
+                return;
+        }
+
+        if (questions.isEmpty()) {
+            Toast.makeText(this, label + "：暂无符合条件的题目", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        QuizSession session = repo.createSessionFromList(questions);
+        if (session != null) {
+            Intent intent = new Intent(this, QuizActivity.class);
+            intent.putExtra(QuizActivity.EXTRA_SESSION_ID, session.id);
+            startActivity(intent);
+        }
+    }
+
+    private void updateFilterButtonCounts() {
+        MaterialButton btnRecentWrong = findViewById(R.id.btnRecentWrong);
+        MaterialButton btnWithNumbers = findViewById(R.id.btnWithNumbers);
+        MaterialButton btnUnattempted = findViewById(R.id.btnUnattempted);
+
+        int wrongCount = repo.getRecentlyWrongQuestions().size();
+        int numberCount = repo.getQuestionsWithNumbers().size();
+        int unattemptedCount = repo.getUnattemptedQuestions().size();
+
+        btnRecentWrong.setText("最近做错的题 (" + wrongCount + ")");
+        btnWithNumbers.setText("含数字的题 (" + numberCount + ")");
+        btnUnattempted.setText("没做过的题 (" + unattemptedCount + ")");
     }
 
     private void refreshResumeCard() {
@@ -154,11 +211,11 @@ public class MainActivity extends AppCompatActivity {
             card.setPadding(20, 16, 20, 16);
             card.setGravity(Gravity.CENTER_VERTICAL);
 
-            GradientDrawable bg = new GradientDrawable();
-            bg.setCornerRadius(10);
-            bg.setColor(getResources().getColor(R.color.light_gray, null));
-            bg.setStroke(1, Color.parseColor("#E0E0E0"));
-            card.setBackground(bg);
+            GradientDrawable cardBg = new GradientDrawable();
+            cardBg.setCornerRadius(10);
+            cardBg.setColor(getResources().getColor(R.color.light_gray, null));
+            cardBg.setStroke(1, Color.parseColor("#E0E0E0"));
+            card.setBackground(cardBg);
 
             LinearLayout.LayoutParams cardParams = new LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);

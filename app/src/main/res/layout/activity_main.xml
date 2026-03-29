@@ -95,6 +95,43 @@
                 android:textSize="16sp" />
         </LinearLayout>
 
+        <!-- Focused Practice Section -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="专项练习"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:textColor="@color/dark_text"
+            android:layout_marginBottom="12dp" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnRecentWrong"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:text="最近做错的题"
+            android:textSize="15sp"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            android:layout_marginBottom="8dp" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnWithNumbers"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:text="含数字的题"
+            android:textSize="15sp"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            android:layout_marginBottom="8dp" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnUnattempted"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:text="没做过的题"
+            android:textSize="15sp"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            android:layout_marginBottom="24dp" />
+
         <!-- Browse question bank -->
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnHistory"
