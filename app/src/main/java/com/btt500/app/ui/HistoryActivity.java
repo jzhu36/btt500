@@ -12,6 +12,7 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.btt500.app.R;
+import com.btt500.app.data.LanguageManager;
 import com.btt500.app.data.QuestionRepository;
 import com.google.android.material.button.MaterialButton;
 
@@ -23,6 +24,7 @@ import java.util.Set;
 public class HistoryActivity extends AppCompatActivity {
 
     private QuestionRepository repo;
+    private LanguageManager langMgr;
     private QuestionStatAdapter adapter;
     private List<QuestionRepository.QuestionStat> allStats;
     private List<QuestionRepository.QuestionStat> filteredStats;
@@ -34,8 +36,12 @@ public class HistoryActivity extends AppCompatActivity {
     private boolean ascending = true;
 
     // Filter state
-    private String filterTopic = null; // null = all
+    private String filterTopic = null;
     private boolean filterRecentWrong = false;
+
+    // Filter chip tags (language-independent)
+    private static final String TAG_ALL = "__all__";
+    private static final String TAG_RECENT_WRONG = "__recent_wrong__";
 
     // Sort buttons
     private MaterialButton btnSortDefault, btnSortPracticed, btnSortWrong, btnSortTopic;
@@ -49,6 +55,7 @@ public class HistoryActivity extends AppCompatActivity {
         setContentView(R.layout.activity_history);
 
         repo = new QuestionRepository(this);
+        langMgr = LanguageManager.getInstance(this);
         tvQuestionCount = findViewById(R.id.tvQuestionCount);
 
         RecyclerView recycler = findViewById(R.id.recyclerHistory);
@@ -69,6 +76,7 @@ public class HistoryActivity extends AppCompatActivity {
 
         loadData();
         buildFilterChips();
+        updateSortButtonLabels();
         applyFilterAndSort();
     }
 
@@ -87,7 +95,8 @@ public class HistoryActivity extends AppCompatActivity {
         layoutFilterChips.removeAllViews();
 
         // "All" chip
-        addFilterChip("全部", () -> {
+        String allLabel = langMgr.isChinese() ? "全部" : "All";
+        addFilterChip(allLabel, TAG_ALL, () -> {
             filterTopic = null;
             filterRecentWrong = false;
             refreshChipStyles();
@@ -95,7 +104,8 @@ public class HistoryActivity extends AppCompatActivity {
         });
 
         // "Recently wrong" chip
-        addFilterChip("最近做错", () -> {
+        String recentWrongLabel = langMgr.isChinese() ? "最近做错" : "Recently Wrong";
+        addFilterChip(recentWrongLabel, TAG_RECENT_WRONG, () -> {
             filterRecentWrong = !filterRecentWrong;
             if (filterRecentWrong) {
                 filterTopic = null;
@@ -107,9 +117,9 @@ public class HistoryActivity extends AppCompatActivity {
         // Topic chips
         List<String> topics = repo.getAllTopics();
         for (String topic : topics) {
-            addFilterChip(topic, () -> {
+            addFilterChip(topic, topic, () -> {
                 if (topic.equals(filterTopic)) {
-                    filterTopic = null; // deselect
+                    filterTopic = null;
                 } else {
                     filterTopic = topic;
                     filterRecentWrong = false;
@@ -122,12 +132,12 @@ public class HistoryActivity extends AppCompatActivity {
         refreshChipStyles();
     }
 
-    private void addFilterChip(String text, Runnable onClick) {
+    private void addFilterChip(String text, String tag, Runnable onClick) {
         TextView chip = new TextView(this);
         chip.setText(text);
         chip.setTextSize(13);
         chip.setPadding(dpToPx(12), dpToPx(6), dpToPx(12), dpToPx(6));
-        chip.setTag(text);
+        chip.setTag(tag);
 
         LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.WRAP_CONTENT,
@@ -146,9 +156,9 @@ public class HistoryActivity extends AppCompatActivity {
             String tag = (String) chip.getTag();
 
             boolean isSelected = false;
-            if ("全部".equals(tag) && filterTopic == null && !filterRecentWrong) {
+            if (TAG_ALL.equals(tag) && filterTopic == null && !filterRecentWrong) {
                 isSelected = true;
-            } else if ("最近做错".equals(tag) && filterRecentWrong) {
+            } else if (TAG_RECENT_WRONG.equals(tag) && filterRecentWrong) {
                 isSelected = true;
             } else if (tag != null && tag.equals(filterTopic)) {
                 isSelected = true;
@@ -174,7 +184,6 @@ public class HistoryActivity extends AppCompatActivity {
             ascending = !ascending;
         } else {
             currentSort = field;
-            // Default direction based on field
             ascending = (field == SortField.DEFAULT || field == SortField.PRACTICED || field == SortField.TOPIC);
         }
         updateSortButtonLabels();
@@ -183,10 +192,17 @@ public class HistoryActivity extends AppCompatActivity {
 
     private void updateSortButtonLabels() {
         String arrow = ascending ? " ↑" : " ↓";
-        btnSortDefault.setText(currentSort == SortField.DEFAULT ? "默认" + arrow : "默认");
-        btnSortPracticed.setText(currentSort == SortField.PRACTICED ? "练习次数" + arrow : "练习次数");
-        btnSortWrong.setText(currentSort == SortField.WRONG ? "错误次数" + arrow : "错误次数");
-        btnSortTopic.setText(currentSort == SortField.TOPIC ? "题目种类" + arrow : "题目种类");
+        boolean zh = langMgr.isChinese();
+
+        String defaultLabel = zh ? "默认" : "Default";
+        String practicedLabel = zh ? "练习次数" : "Practiced";
+        String wrongLabel = zh ? "错误次数" : "Wrong";
+        String topicLabel = zh ? "题目种类" : "Topic";
+
+        btnSortDefault.setText(currentSort == SortField.DEFAULT ? defaultLabel + arrow : defaultLabel);
+        btnSortPracticed.setText(currentSort == SortField.PRACTICED ? practicedLabel + arrow : practicedLabel);
+        btnSortWrong.setText(currentSort == SortField.WRONG ? wrongLabel + arrow : wrongLabel);
+        btnSortTopic.setText(currentSort == SortField.TOPIC ? topicLabel + arrow : topicLabel);
     }
 
     private void applyFilterAndSort() {
@@ -199,13 +215,11 @@ public class HistoryActivity extends AppCompatActivity {
         }
 
         for (QuestionRepository.QuestionStat stat : allStats) {
-            // Apply topic filter
             if (filterTopic != null) {
                 if (stat.question.topic == null || !stat.question.topic.equals(filterTopic)) {
                     continue;
                 }
             }
-            // Apply recently wrong filter
             if (filterRecentWrong && recentlyWrongIds != null) {
                 if (!recentlyWrongIds.contains(stat.question.id)) {
                     continue;
@@ -244,9 +258,7 @@ public class HistoryActivity extends AppCompatActivity {
                 break;
         }
 
-        // Update count display
         tvQuestionCount.setText(filteredStats.size() + "/" + allStats.size());
-
         adapter.updateData(filteredStats);
     }
 

@@ -15,6 +15,7 @@ import android.widget.TextView;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.btt500.app.R;
+import com.btt500.app.data.LanguageManager;
 import com.btt500.app.data.Question;
 import com.btt500.app.data.QuestionRepository;
 import com.btt500.app.data.QuizSession;
@@ -29,13 +30,14 @@ public class QuizActivity extends AppCompatActivity {
     public static final String EXTRA_QUESTION_COUNT = "question_count";
 
     private QuestionRepository repo;
+    private LanguageManager langMgr;
     private QuizSession session;
     private List<Question> questions;
     private List<String> sessionResults;
     private int currentIndex = 0;
     private boolean answered = false;
 
-    private TextView tvProgress, tvScore, tvQuestion, tvQuestionEn, tvFeedback, tvCorrectAnswer;
+    private TextView tvProgress, tvScore, tvQuestion, tvFeedback, tvCorrectAnswer;
     private ImageView ivQuestionImage;
     private LinearLayout layoutOptions;
     private ProgressBar progressBar;
@@ -49,7 +51,6 @@ public class QuizActivity extends AppCompatActivity {
         tvProgress = findViewById(R.id.tvProgress);
         tvScore = findViewById(R.id.tvScore);
         tvQuestion = findViewById(R.id.tvQuestion);
-        tvQuestionEn = findViewById(R.id.tvQuestionEn);
         tvFeedback = findViewById(R.id.tvFeedback);
         tvCorrectAnswer = findViewById(R.id.tvCorrectAnswer);
         ivQuestionImage = findViewById(R.id.ivQuestionImage);
@@ -57,7 +58,14 @@ public class QuizActivity extends AppCompatActivity {
         progressBar = findViewById(R.id.progressBar);
         btnNext = findViewById(R.id.btnNext);
 
+        // Hide the English subtitle TextView since we now use single language
+        TextView tvQuestionEn = findViewById(R.id.tvQuestionEn);
+        if (tvQuestionEn != null) {
+            tvQuestionEn.setVisibility(View.GONE);
+        }
+
         repo = new QuestionRepository(this);
+        langMgr = LanguageManager.getInstance(this);
 
         long sessionId = getIntent().getLongExtra(EXTRA_SESSION_ID, -1);
         int questionCount = getIntent().getIntExtra(EXTRA_QUESTION_COUNT, 50);
@@ -109,20 +117,15 @@ public class QuizActivity extends AppCompatActivity {
     private void showQuestion() {
         answered = false;
         Question q = questions.get(currentIndex);
+        String lang = langMgr.getLanguage();
 
         tvProgress.setText(getString(R.string.question_progress,
                 session.answeredCount + 1, session.totalQuestions));
         tvScore.setText(session.correctCount + " ✓");
         progressBar.setProgress(session.answeredCount);
 
-        tvQuestion.setText(q.getDisplayQuestion());
-
-        if (q.question_en != null && !q.question_en.isEmpty()) {
-            tvQuestionEn.setText(q.question_en);
-            tvQuestionEn.setVisibility(View.VISIBLE);
-        } else {
-            tvQuestionEn.setVisibility(View.GONE);
-        }
+        // Display question in selected language only
+        tvQuestion.setText(q.getQuestionText(lang));
 
         // Show question image if available
         loadQuestionImage(q);
@@ -132,7 +135,7 @@ public class QuizActivity extends AppCompatActivity {
         btnNext.setVisibility(View.GONE);
 
         layoutOptions.removeAllViews();
-        List<String> options = q.getDisplayOptions();
+        List<String> options = q.getOptions(lang);
         if (options == null) return;
 
         char[] labels = {'A', 'B', 'C', 'D'};
@@ -142,10 +145,8 @@ public class QuizActivity extends AppCompatActivity {
             TextView optionView = new TextView(this);
             String label = (i < labels.length) ? labels[i] + ". " : "";
 
+            // Single language only
             String displayText = label + options.get(i);
-            if (q.options_en != null && i < q.options_en.size() && q.options_en.get(i) != null) {
-                displayText += "\n" + q.options_en.get(i);
-            }
             optionView.setText(displayText);
             optionView.setTextSize(18);
             optionView.setPadding(28, 24, 28, 24);
@@ -168,9 +169,6 @@ public class QuizActivity extends AppCompatActivity {
         }
     }
 
-    /**
-     * Load and display the question image from assets.
-     */
     private void loadQuestionImage(Question q) {
         if (q.images != null && !q.images.isEmpty()) {
             String imageName = q.images.get(0);
@@ -195,6 +193,7 @@ public class QuizActivity extends AppCompatActivity {
         answered = true;
 
         Question q = questions.get(currentIndex);
+        String lang = langMgr.getLanguage();
         boolean isCorrect = (selectedIndex == q.correct_answer);
 
         repo.recordSessionAnswer(session, currentIndex, isCorrect);
@@ -202,12 +201,14 @@ public class QuizActivity extends AppCompatActivity {
 
         tvFeedback.setVisibility(View.VISIBLE);
         if (isCorrect) {
-            tvFeedback.setText(R.string.correct);
+            tvFeedback.setText(langMgr.isChinese() ? "✓ 正确" : "✓ Correct");
             tvFeedback.setTextColor(getResources().getColor(R.color.correct_green, null));
         } else {
-            tvFeedback.setText(R.string.incorrect);
+            tvFeedback.setText(langMgr.isChinese() ? "✗ 错误" : "✗ Incorrect");
             tvFeedback.setTextColor(getResources().getColor(R.color.wrong_red, null));
-            tvCorrectAnswer.setText(getString(R.string.correct_answer, q.getCorrectOptionText()));
+
+            String correctLabel = langMgr.isChinese() ? "正确答案：" : "Correct answer: ";
+            tvCorrectAnswer.setText(correctLabel + q.getCorrectOptionText(lang));
             tvCorrectAnswer.setVisibility(View.VISIBLE);
         }
 
@@ -237,9 +238,9 @@ public class QuizActivity extends AppCompatActivity {
 
         btnNext.setVisibility(View.VISIBLE);
         if (session.isCompleted) {
-            btnNext.setText(R.string.finish);
+            btnNext.setText(langMgr.isChinese() ? "完成" : "Finish");
         } else {
-            btnNext.setText(R.string.next_question);
+            btnNext.setText(langMgr.isChinese() ? "下一题" : "Next");
         }
     }
 
@@ -255,11 +256,15 @@ public class QuizActivity extends AppCompatActivity {
     @Override
     public void onBackPressed() {
         if (session != null && !session.isCompleted) {
+            String title = langMgr.isChinese() ? "暂停练习" : "Pause Practice";
+            String msg = langMgr.isChinese() ? "进度已自动保存，下次可以继续。" : "Progress saved. You can resume later.";
+            String exit = langMgr.isChinese() ? "退出" : "Exit";
+            String cont = langMgr.isChinese() ? "继续" : "Continue";
             new androidx.appcompat.app.AlertDialog.Builder(this)
-                    .setTitle("暂停练习")
-                    .setMessage("进度已自动保存，下次可以继续。")
-                    .setPositiveButton("退出", (d, w) -> finish())
-                    .setNegativeButton("继续", null)
+                    .setTitle(title)
+                    .setMessage(msg)
+                    .setPositiveButton(exit, (d, w) -> finish())
+                    .setNegativeButton(cont, null)
                     .show();
         } else {
             finish();

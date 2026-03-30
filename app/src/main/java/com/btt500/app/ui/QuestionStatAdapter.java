@@ -15,6 +15,7 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.btt500.app.R;
 import com.btt500.app.data.AnswerRecord;
+import com.btt500.app.data.LanguageManager;
 import com.btt500.app.data.QuestionRepository;
 
 import java.util.Collections;
@@ -24,10 +25,12 @@ public class QuestionStatAdapter extends RecyclerView.Adapter<QuestionStatAdapte
 
     private List<QuestionRepository.QuestionStat> stats;
     private final Context context;
+    private final LanguageManager langMgr;
 
     public QuestionStatAdapter(Context context, List<QuestionRepository.QuestionStat> stats) {
         this.context = context;
         this.stats = stats;
+        this.langMgr = LanguageManager.getInstance(context);
     }
 
     public void updateData(List<QuestionRepository.QuestionStat> newStats) {
@@ -47,7 +50,9 @@ public class QuestionStatAdapter extends RecyclerView.Adapter<QuestionStatAdapte
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
         QuestionRepository.QuestionStat stat = stats.get(position);
 
-        holder.tvQuestion.setText((position + 1) + ". " + stat.question.getDisplayQuestion());
+        // Display question in selected language
+        String lang = langMgr.getLanguage();
+        holder.tvQuestion.setText((position + 1) + ". " + stat.question.getQuestionText(lang));
 
         // Topic tag
         if (stat.question.topic != null && !stat.question.topic.isEmpty()) {

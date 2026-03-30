@@ -16,6 +16,7 @@ import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.btt500.app.R;
+import com.btt500.app.data.LanguageManager;
 import com.btt500.app.data.Question;
 import com.btt500.app.data.QuestionRepository;
 import com.btt500.app.data.QuizSession;
@@ -29,15 +30,12 @@ import java.util.Locale;
 public class MainActivity extends AppCompatActivity {
 
     private QuestionRepository repo;
+    private LanguageManager langMgr;
     private LinearLayout layoutSessionHistory;
     private LinearLayout layoutResumeCard;
     private CheckBox cbRecentWrong, cbWithNumbers, cbUnattempted;
     private TextView tvFilteredCount;
-
-    // Cached counts for filter labels
-    private int recentWrongCount = 0;
-    private int withNumbersCount = 0;
-    private int unattemptedCount = 0;
+    private MaterialButton btnLanguage;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -45,6 +43,7 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         repo = new QuestionRepository(this);
+        langMgr = LanguageManager.getInstance(this);
 
         MaterialButton btnStart10 = findViewById(R.id.btnStart10);
         MaterialButton btnStart20 = findViewById(R.id.btnStart20);
@@ -58,11 +57,19 @@ public class MainActivity extends AppCompatActivity {
         cbWithNumbers = findViewById(R.id.cbWithNumbers);
         cbUnattempted = findViewById(R.id.cbUnattempted);
         tvFilteredCount = findViewById(R.id.tvFilteredCount);
+        btnLanguage = findViewById(R.id.btnLanguage);
 
         int total = repo.getTotalQuestionCount();
         tvTotal.setText(getString(R.string.total_questions, total));
 
-        // Checkbox change listeners to update filtered count
+        // Language toggle
+        updateLanguageButton();
+        btnLanguage.setOnClickListener(v -> {
+            langMgr.toggleLanguage();
+            updateLanguageButton();
+        });
+
+        // Checkbox change listeners
         CompoundButton.OnCheckedChangeListener filterListener = (buttonView, isChecked) -> updateFilteredCount();
         cbRecentWrong.setOnCheckedChangeListener(filterListener);
         cbWithNumbers.setOnCheckedChangeListener(filterListener);
@@ -71,7 +78,7 @@ public class MainActivity extends AppCompatActivity {
         btnStart10.setOnClickListener(v -> startFromFilter(10));
         btnStart20.setOnClickListener(v -> startFromFilter(20));
         btnStart50.setOnClickListener(v -> startFromFilter(50));
-        btnStartAll.setOnClickListener(v -> startFromFilter(-1)); // -1 means all
+        btnStartAll.setOnClickListener(v -> startFromFilter(-1));
 
         btnHistory.setOnClickListener(v -> {
             startActivity(new Intent(this, HistoryActivity.class));
@@ -81,35 +88,52 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
+        updateLanguageButton();
         updateFilterLabels();
         updateFilteredCount();
         refreshResumeCard();
         refreshSessionHistory();
     }
 
-    /**
-     * Update checkbox labels with counts.
-     */
-    private void updateFilterLabels() {
-        recentWrongCount = repo.getRecentlyWrongQuestions().size();
-        withNumbersCount = repo.getQuestionsWithNumbers().size();
-        unattemptedCount = repo.getUnattemptedQuestions().size();
-
-        cbRecentWrong.setText("最近做错的题 (" + recentWrongCount + ")");
-        cbWithNumbers.setText("含数字的题 (" + withNumbersCount + ")");
-        cbUnattempted.setText("没做过的题 (" + unattemptedCount + ")");
+    private void updateLanguageButton() {
+        if (langMgr.isChinese()) {
+            btnLanguage.setText("当前：中文 | 切换为 English");
+        } else {
+            btnLanguage.setText("Current: English | Switch to 中文");
+        }
     }
 
-    /**
-     * Update the filtered pool count display.
-     */
+    private void updateFilterLabels() {
+        int recentWrongCount = repo.getRecentlyWrongQuestions().size();
+        int withNumbersCount = repo.getQuestionsWithNumbers().size();
+        int unattemptedCount = repo.getUnattemptedQuestions().size();
+
+        if (langMgr.isChinese()) {
+            cbRecentWrong.setText("最近做错的题 (" + recentWrongCount + ")");
+            cbWithNumbers.setText("含数字的题 (" + withNumbersCount + ")");
+            cbUnattempted.setText("没做过的题 (" + unattemptedCount + ")");
+        } else {
+            cbRecentWrong.setText("Recently Wrong (" + recentWrongCount + ")");
+            cbWithNumbers.setText("With Numbers (" + withNumbersCount + ")");
+            cbUnattempted.setText("Not Attempted (" + unattemptedCount + ")");
+        }
+    }
+
     private void updateFilteredCount() {
         List<Question> pool = getFilteredPool();
         boolean anyFilter = cbRecentWrong.isChecked() || cbWithNumbers.isChecked() || cbUnattempted.isChecked();
-        if (anyFilter) {
-            tvFilteredCount.setText("筛选后题池：" + pool.size() + " 题");
+        if (langMgr.isChinese()) {
+            if (anyFilter) {
+                tvFilteredCount.setText("筛选后题池：" + pool.size() + " 题");
+            } else {
+                tvFilteredCount.setText("当前题池：全部 " + repo.getTotalQuestionCount() + " 题");
+            }
         } else {
-            tvFilteredCount.setText("当前题池：全部 " + repo.getTotalQuestionCount() + " 题");
+            if (anyFilter) {
+                tvFilteredCount.setText("Filtered pool: " + pool.size() + " questions");
+            } else {
+                tvFilteredCount.setText("Current pool: all " + repo.getTotalQuestionCount() + " questions");
+            }
         }
     }
 
@@ -121,31 +145,24 @@ public class MainActivity extends AppCompatActivity {
         );
     }
 
-    /**
-     * Start a quiz from the filtered pool.
-     * @param count number of questions to pick, or -1 for all in the pool
-     */
     private void startFromFilter(int count) {
         List<Question> pool = getFilteredPool();
 
         if (pool.isEmpty()) {
-            Toast.makeText(this, "筛选后没有符合条件的题目", Toast.LENGTH_SHORT).show();
+            String msg = langMgr.isChinese() ? "筛选后没有符合条件的题目" : "No questions match the selected filters";
+            Toast.makeText(this, msg, Toast.LENGTH_SHORT).show();
             return;
         }
 
         List<Question> selected;
-        boolean anyFilter = cbRecentWrong.isChecked() || cbWithNumbers.isChecked() || cbUnattempted.isChecked();
 
         if (count == -1) {
-            // "全部做完" — use all questions in pool, shuffled
             selected = pool;
             java.util.Collections.shuffle(selected);
         } else if (count >= pool.size()) {
-            // Requested count >= pool size, use all
             selected = pool;
             java.util.Collections.shuffle(selected);
         } else {
-            // Use weighted random sampling from the filtered pool
             selected = repo.selectQuestionsFromPool(pool, count);
         }
 
@@ -174,15 +191,20 @@ public class MainActivity extends AppCompatActivity {
             card.setBackground(bg);
 
             TextView tvTitle = new TextView(this);
-            tvTitle.setText("有未完成的练习");
+            tvTitle.setText(langMgr.isChinese() ? "有未完成的练习" : "Incomplete Session");
             tvTitle.setTextSize(16);
             tvTitle.setTypeface(null, Typeface.BOLD);
             tvTitle.setTextColor(Color.parseColor("#E65100"));
             card.addView(tvTitle);
 
             TextView tvInfo = new TextView(this);
-            tvInfo.setText(String.format("已完成 %d/%d 题 · 正确 %d 题",
-                    incomplete.answeredCount, incomplete.totalQuestions, incomplete.correctCount));
+            if (langMgr.isChinese()) {
+                tvInfo.setText(String.format("已完成 %d/%d 题 · 正确 %d 题",
+                        incomplete.answeredCount, incomplete.totalQuestions, incomplete.correctCount));
+            } else {
+                tvInfo.setText(String.format("Completed %d/%d · Correct %d",
+                        incomplete.answeredCount, incomplete.totalQuestions, incomplete.correctCount));
+            }
             tvInfo.setTextSize(14);
             tvInfo.setTextColor(Color.parseColor("#BF360C"));
             LinearLayout.LayoutParams infoParams = new LinearLayout.LayoutParams(
@@ -192,7 +214,7 @@ public class MainActivity extends AppCompatActivity {
             card.addView(tvInfo);
 
             MaterialButton btnResume = new MaterialButton(this);
-            btnResume.setText("继续练习");
+            btnResume.setText(langMgr.isChinese() ? "继续练习" : "Resume");
             btnResume.setTextSize(14);
             LinearLayout.LayoutParams btnParams = new LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.MATCH_PARENT, dpToPx(44));
@@ -223,7 +245,7 @@ public class MainActivity extends AppCompatActivity {
         layoutSessionHistory.setVisibility(View.VISIBLE);
 
         TextView tvSectionTitle = new TextView(this);
-        tvSectionTitle.setText("练习历史");
+        tvSectionTitle.setText(langMgr.isChinese() ? "练习历史" : "Practice History");
         tvSectionTitle.setTextSize(18);
         tvSectionTitle.setTypeface(null, Typeface.BOLD);
         tvSectionTitle.setTextColor(getResources().getColor(R.color.dark_text, null));
@@ -281,8 +303,13 @@ public class MainActivity extends AppCompatActivity {
 
             TextView tvStats = new TextView(this);
             int wrongCount = s.totalQuestions - s.correctCount;
-            tvStats.setText(String.format("共 %d 题 · 正确 %d · 错误 %d",
-                    s.totalQuestions, s.correctCount, wrongCount));
+            if (langMgr.isChinese()) {
+                tvStats.setText(String.format("共 %d 题 · 正确 %d · 错误 %d",
+                        s.totalQuestions, s.correctCount, wrongCount));
+            } else {
+                tvStats.setText(String.format("Total %d · Correct %d · Wrong %d",
+                        s.totalQuestions, s.correctCount, wrongCount));
+            }
             tvStats.setTextSize(14);
             tvStats.setTextColor(getResources().getColor(R.color.dark_text, null));
             LinearLayout.LayoutParams statsParams = new LinearLayout.LayoutParams(
