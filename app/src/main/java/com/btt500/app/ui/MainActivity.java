@@ -7,6 +7,8 @@ import android.graphics.drawable.GradientDrawable;
 import android.os.Bundle;
 import android.view.Gravity;
 import android.view.View;
+import android.widget.CheckBox;
+import android.widget.CompoundButton;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -29,6 +31,13 @@ public class MainActivity extends AppCompatActivity {
     private QuestionRepository repo;
     private LinearLayout layoutSessionHistory;
     private LinearLayout layoutResumeCard;
+    private CheckBox cbRecentWrong, cbWithNumbers, cbUnattempted;
+    private TextView tvFilteredCount;
+
+    // Cached counts for filter labels
+    private int recentWrongCount = 0;
+    private int withNumbersCount = 0;
+    private int unattemptedCount = 0;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -40,24 +49,29 @@ public class MainActivity extends AppCompatActivity {
         MaterialButton btnStart10 = findViewById(R.id.btnStart10);
         MaterialButton btnStart20 = findViewById(R.id.btnStart20);
         MaterialButton btnStart50 = findViewById(R.id.btnStart50);
+        MaterialButton btnStartAll = findViewById(R.id.btnStartAll);
         MaterialButton btnHistory = findViewById(R.id.btnHistory);
-        MaterialButton btnRecentWrong = findViewById(R.id.btnRecentWrong);
-        MaterialButton btnWithNumbers = findViewById(R.id.btnWithNumbers);
-        MaterialButton btnUnattempted = findViewById(R.id.btnUnattempted);
         TextView tvTotal = findViewById(R.id.tvTotalQuestions);
         layoutResumeCard = findViewById(R.id.layoutResumeCard);
         layoutSessionHistory = findViewById(R.id.layoutSessionHistory);
+        cbRecentWrong = findViewById(R.id.cbRecentWrong);
+        cbWithNumbers = findViewById(R.id.cbWithNumbers);
+        cbUnattempted = findViewById(R.id.cbUnattempted);
+        tvFilteredCount = findViewById(R.id.tvFilteredCount);
 
         int total = repo.getTotalQuestionCount();
         tvTotal.setText(getString(R.string.total_questions, total));
 
-        btnStart10.setOnClickListener(v -> startNewSession(10));
-        btnStart20.setOnClickListener(v -> startNewSession(20));
-        btnStart50.setOnClickListener(v -> startNewSession(50));
+        // Checkbox change listeners to update filtered count
+        CompoundButton.OnCheckedChangeListener filterListener = (buttonView, isChecked) -> updateFilteredCount();
+        cbRecentWrong.setOnCheckedChangeListener(filterListener);
+        cbWithNumbers.setOnCheckedChangeListener(filterListener);
+        cbUnattempted.setOnCheckedChangeListener(filterListener);
 
-        btnRecentWrong.setOnClickListener(v -> startFilteredQuiz("recent_wrong"));
-        btnWithNumbers.setOnClickListener(v -> startFilteredQuiz("with_numbers"));
-        btnUnattempted.setOnClickListener(v -> startFilteredQuiz("unattempted"));
+        btnStart10.setOnClickListener(v -> startFromFilter(10));
+        btnStart20.setOnClickListener(v -> startFromFilter(20));
+        btnStart50.setOnClickListener(v -> startFromFilter(50));
+        btnStartAll.setOnClickListener(v -> startFromFilter(-1)); // -1 means all
 
         btnHistory.setOnClickListener(v -> {
             startActivity(new Intent(this, HistoryActivity.class));
@@ -67,62 +81,80 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
+        updateFilterLabels();
+        updateFilteredCount();
         refreshResumeCard();
         refreshSessionHistory();
-        updateFilterButtonCounts();
     }
 
-    private void startNewSession(int count) {
-        Intent intent = new Intent(this, QuizActivity.class);
-        intent.putExtra(QuizActivity.EXTRA_QUESTION_COUNT, count);
-        startActivity(intent);
+    /**
+     * Update checkbox labels with counts.
+     */
+    private void updateFilterLabels() {
+        recentWrongCount = repo.getRecentlyWrongQuestions().size();
+        withNumbersCount = repo.getQuestionsWithNumbers().size();
+        unattemptedCount = repo.getUnattemptedQuestions().size();
+
+        cbRecentWrong.setText("最近做错的题 (" + recentWrongCount + ")");
+        cbWithNumbers.setText("含数字的题 (" + withNumbersCount + ")");
+        cbUnattempted.setText("没做过的题 (" + unattemptedCount + ")");
     }
 
-    private void startFilteredQuiz(String filterMode) {
-        List<Question> questions;
-        String label;
-        switch (filterMode) {
-            case "recent_wrong":
-                questions = repo.getRecentlyWrongQuestions();
-                label = "最近做错的题";
-                break;
-            case "with_numbers":
-                questions = repo.getQuestionsWithNumbers();
-                label = "含数字的题";
-                break;
-            case "unattempted":
-                questions = repo.getUnattemptedQuestions();
-                label = "没做过的题";
-                break;
-            default:
-                return;
+    /**
+     * Update the filtered pool count display.
+     */
+    private void updateFilteredCount() {
+        List<Question> pool = getFilteredPool();
+        boolean anyFilter = cbRecentWrong.isChecked() || cbWithNumbers.isChecked() || cbUnattempted.isChecked();
+        if (anyFilter) {
+            tvFilteredCount.setText("筛选后题池：" + pool.size() + " 题");
+        } else {
+            tvFilteredCount.setText("当前题池：全部 " + repo.getTotalQuestionCount() + " 题");
         }
+    }
 
-        if (questions.isEmpty()) {
-            Toast.makeText(this, label + "：暂无符合条件的题目", Toast.LENGTH_SHORT).show();
+    private List<Question> getFilteredPool() {
+        return repo.getFilteredPool(
+                cbRecentWrong.isChecked(),
+                cbWithNumbers.isChecked(),
+                cbUnattempted.isChecked()
+        );
+    }
+
+    /**
+     * Start a quiz from the filtered pool.
+     * @param count number of questions to pick, or -1 for all in the pool
+     */
+    private void startFromFilter(int count) {
+        List<Question> pool = getFilteredPool();
+
+        if (pool.isEmpty()) {
+            Toast.makeText(this, "筛选后没有符合条件的题目", Toast.LENGTH_SHORT).show();
             return;
         }
 
-        QuizSession session = repo.createSessionFromList(questions);
+        List<Question> selected;
+        boolean anyFilter = cbRecentWrong.isChecked() || cbWithNumbers.isChecked() || cbUnattempted.isChecked();
+
+        if (count == -1) {
+            // "全部做完" — use all questions in pool, shuffled
+            selected = pool;
+            java.util.Collections.shuffle(selected);
+        } else if (count >= pool.size()) {
+            // Requested count >= pool size, use all
+            selected = pool;
+            java.util.Collections.shuffle(selected);
+        } else {
+            // Use weighted random sampling from the filtered pool
+            selected = repo.selectQuestionsFromPool(pool, count);
+        }
+
+        QuizSession session = repo.createSessionFromList(selected);
         if (session != null) {
             Intent intent = new Intent(this, QuizActivity.class);
             intent.putExtra(QuizActivity.EXTRA_SESSION_ID, session.id);
             startActivity(intent);
         }
-    }
-
-    private void updateFilterButtonCounts() {
-        MaterialButton btnRecentWrong = findViewById(R.id.btnRecentWrong);
-        MaterialButton btnWithNumbers = findViewById(R.id.btnWithNumbers);
-        MaterialButton btnUnattempted = findViewById(R.id.btnUnattempted);
-
-        int wrongCount = repo.getRecentlyWrongQuestions().size();
-        int numberCount = repo.getQuestionsWithNumbers().size();
-        int unattemptedCount = repo.getUnattemptedQuestions().size();
-
-        btnRecentWrong.setText("最近做错的题 (" + wrongCount + ")");
-        btnWithNumbers.setText("含数字的题 (" + numberCount + ")");
-        btnUnattempted.setText("没做过的题 (" + unattemptedCount + ")");
     }
 
     private void refreshResumeCard() {
@@ -131,7 +163,6 @@ public class MainActivity extends AppCompatActivity {
         if (incomplete != null) {
             layoutResumeCard.setVisibility(View.VISIBLE);
 
-            // Build resume card
             LinearLayout card = new LinearLayout(this);
             card.setOrientation(LinearLayout.VERTICAL);
             card.setPadding(24, 20, 24, 20);
@@ -191,7 +222,6 @@ public class MainActivity extends AppCompatActivity {
 
         layoutSessionHistory.setVisibility(View.VISIBLE);
 
-        // Section title
         TextView tvSectionTitle = new TextView(this);
         tvSectionTitle.setText("练习历史");
         tvSectionTitle.setTextSize(18);
@@ -222,7 +252,6 @@ public class MainActivity extends AppCompatActivity {
             cardParams.bottomMargin = 8;
             card.setLayoutParams(cardParams);
 
-            // Left: score circle
             int percentage = s.totalQuestions > 0 ? (s.correctCount * 100 / s.totalQuestions) : 0;
             boolean passed = percentage >= 90;
 
@@ -237,7 +266,6 @@ public class MainActivity extends AppCompatActivity {
             tvPercent.setLayoutParams(pctParams);
             card.addView(tvPercent);
 
-            // Right: details
             LinearLayout details = new LinearLayout(this);
             details.setOrientation(LinearLayout.VERTICAL);
             LinearLayout.LayoutParams detParams = new LinearLayout.LayoutParams(

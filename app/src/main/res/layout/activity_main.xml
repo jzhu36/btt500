@@ -50,11 +50,60 @@
             android:layout_marginBottom="16dp"
             android:visibility="gone" />
 
-        <!-- Start new session -->
+        <!-- Filter Section -->
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="开始新练习"
+            android:text="题目筛选"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:textColor="@color/dark_text"
+            android:layout_marginBottom="8dp" />
+
+        <CheckBox
+            android:id="@+id/cbRecentWrong"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="最近做错的题"
+            android:textSize="15sp"
+            android:paddingStart="8dp"
+            android:minHeight="44dp" />
+
+        <CheckBox
+            android:id="@+id/cbWithNumbers"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="含数字的题"
+            android:textSize="15sp"
+            android:paddingStart="8dp"
+            android:minHeight="44dp" />
+
+        <CheckBox
+            android:id="@+id/cbUnattempted"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="没做过的题"
+            android:textSize="15sp"
+            android:paddingStart="8dp"
+            android:minHeight="44dp" />
+
+        <!-- Filtered pool info -->
+        <TextView
+            android:id="@+id/tvFilteredCount"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="当前题池：610 题"
+            android:textSize="14sp"
+            android:textColor="@color/primary"
+            android:textStyle="bold"
+            android:layout_marginTop="8dp"
+            android:layout_marginBottom="16dp" />
+
+        <!-- Start buttons -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="选择题数开始练习"
             android:textSize="16sp"
             android:textStyle="bold"
             android:textColor="@color/dark_text"
@@ -64,7 +113,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
-            android:layout_marginBottom="24dp">
+            android:layout_marginBottom="8dp">
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnStart10"
@@ -95,39 +144,11 @@
                 android:textSize="16sp" />
         </LinearLayout>
 
-        <!-- Focused Practice Section -->
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="专项练习"
-            android:textSize="16sp"
-            android:textStyle="bold"
-            android:textColor="@color/dark_text"
-            android:layout_marginBottom="12dp" />
-
         <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnRecentWrong"
+            android:id="@+id/btnStartAll"
             android:layout_width="match_parent"
             android:layout_height="48dp"
-            android:text="最近做错的题"
-            android:textSize="15sp"
-            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-            android:layout_marginBottom="8dp" />
-
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnWithNumbers"
-            android:layout_width="match_parent"
-            android:layout_height="48dp"
-            android:text="含数字的题"
-            android:textSize="15sp"
-            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-            android:layout_marginBottom="8dp" />
-
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnUnattempted"
-            android:layout_width="match_parent"
-            android:layout_height="48dp"
-            android:text="没做过的题"
+            android:text="全部做完"
             android:textSize="15sp"
             style="@style/Widget.MaterialComponents.Button.OutlinedButton"
             android:layout_marginBottom="24dp" />
