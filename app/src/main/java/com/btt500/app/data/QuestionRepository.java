@@ -83,25 +83,32 @@ public class QuestionRepository {
     }
 
     /**
-     * Select questions using weighted random sampling.
+     * Select questions using weighted random sampling from the full pool.
      * Questions whose most recent OR second most recent answer was WRONG get 5x weight.
      * Questions never attempted get 5x weight.
      * All other questions (last two answers both correct) get 1x weight.
      */
     public List<Question> selectQuestions(int count) {
-        // Find which questions were last answered incorrectly
-        Set<String> lastWrongIds = getRecentlyWrongQuestionIds();
+        return selectQuestionsFromPool(allQuestions, count);
+    }
 
-        // Find which questions have been attempted at least once
+    /**
+     * Select questions using weighted random sampling from a given pool.
+     * Questions whose most recent OR second most recent answer was WRONG get 5x weight.
+     * Questions never attempted get 5x weight.
+     * All other questions (last two answers both correct) get 1x weight.
+     */
+    public List<Question> selectQuestionsFromPool(List<Question> pool, int count) {
+        if (pool == null || pool.isEmpty()) return new ArrayList<>();
+
+        Set<String> lastWrongIds = getRecentlyWrongQuestionIds();
         Set<String> attemptedIds = new HashSet<>(dao.getAllAttemptedQuestionIds());
 
-        // Build weighted list: each question gets a weight
-        // lastWrong -> weight 5, never attempted -> weight 5, others -> weight 1
-        List<Question> pool = new ArrayList<>(allQuestions);
-        double[] weights = new double[pool.size()];
+        List<Question> poolCopy = new ArrayList<>(pool);
+        double[] weights = new double[poolCopy.size()];
         double totalWeight = 0;
-        for (int i = 0; i < pool.size(); i++) {
-            String qid = pool.get(i).id;
+        for (int i = 0; i < poolCopy.size(); i++) {
+            String qid = poolCopy.get(i).id;
             if (lastWrongIds.contains(qid) || !attemptedIds.contains(qid)) {
                 weights[i] = 5.0;
             } else {
@@ -110,16 +117,15 @@ public class QuestionRepository {
             totalWeight += weights[i];
         }
 
-        // Weighted random sampling without replacement
         List<Question> result = new ArrayList<>();
         java.util.Random random = new java.util.Random();
-        int remaining = Math.min(count, pool.size());
+        int remaining = Math.min(count, poolCopy.size());
 
         for (int picked = 0; picked < remaining; picked++) {
             double r = random.nextDouble() * totalWeight;
             double cumulative = 0;
-            int selectedIdx = pool.size() - 1; // fallback
-            for (int i = 0; i < pool.size(); i++) {
+            int selectedIdx = poolCopy.size() - 1;
+            for (int i = 0; i < poolCopy.size(); i++) {
                 if (weights[i] <= 0) continue;
                 cumulative += weights[i];
                 if (cumulative >= r) {
@@ -127,13 +133,11 @@ public class QuestionRepository {
                     break;
                 }
             }
-            result.add(pool.get(selectedIdx));
-            // Remove selected from future picks
+            result.add(poolCopy.get(selectedIdx));
             totalWeight -= weights[selectedIdx];
             weights[selectedIdx] = 0;
         }
 
-        // Shuffle the final selection so the order is random
         Collections.shuffle(result);
         return result;
     }
@@ -162,38 +166,11 @@ public class QuestionRepository {
     // ==================== Session Methods ====================
 
     /**
-     * Create a new quiz session with the given question count.
+     * Create a new quiz session with the given question count from the full pool.
      */
     public QuizSession createSession(int questionCount) {
         List<Question> selected = selectQuestions(questionCount);
-
-        QuizSession session = new QuizSession();
-        session.totalQuestions = selected.size();
-        session.answeredCount = 0;
-        session.correctCount = 0;
-        session.isCompleted = false;
-        session.createdAt = System.currentTimeMillis();
-        session.completedAt = 0;
-
-        // Build CSV of question IDs
-        StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < selected.size(); i++) {
-            if (i > 0) sb.append(",");
-            sb.append(selected.get(i).id);
-        }
-        session.questionIdsCsv = sb.toString();
-
-        // Initialize results CSV with empty values
-        StringBuilder resSb = new StringBuilder();
-        for (int i = 0; i < selected.size(); i++) {
-            if (i > 0) resSb.append(",");
-            resSb.append("-"); // "-" means unanswered
-        }
-        session.resultsCsv = resSb.toString();
-
-        long id = sessionDao.insert(session);
-        session.id = id;
-        return session;
+        return createSessionFromList(selected);
     }
 
     /**
@@ -264,7 +241,6 @@ public class QuestionRepository {
      * Record an answer within a session.
      */
     public void recordSessionAnswer(QuizSession session, int questionIndex, boolean isCorrect) {
-        // Update the results CSV
         List<String> results = getSessionResults(session);
         if (questionIndex < results.size()) {
             results.set(questionIndex, isCorrect ? "1" : "0");
@@ -281,7 +257,6 @@ public class QuestionRepository {
             session.correctCount++;
         }
 
-        // Check if session is complete
         if (session.answeredCount >= session.totalQuestions) {
             session.isCompleted = true;
             session.completedAt = System.currentTimeMillis();
@@ -313,7 +288,6 @@ public class QuestionRepository {
             wrongMap.put(wc.questionId, wc.cnt);
         }
 
-        // Get all records for building history icons
         List<AnswerRecord> allRecords = dao.getAllRecords();
         Map<String, List<AnswerRecord>> recordsByQuestion = new HashMap<>();
         for (AnswerRecord r : allRecords) {
@@ -338,8 +312,6 @@ public class QuestionRepository {
      */
     public Set<String> getRecentlyWrongQuestionIds() {
         List<AnswerRecord> allRecords = dao.getAllRecords();
-        // Group by question: collect the two most recent results per question
-        // allRecords is ordered by timestamp DESC, so first occurrence per question is the latest
         Map<String, List<Boolean>> recentResults = new HashMap<>();
         for (AnswerRecord r : allRecords) {
             List<Boolean> results = recentResults.computeIfAbsent(r.questionId, k -> new ArrayList<>());
@@ -350,7 +322,6 @@ public class QuestionRepository {
         Set<String> result = new HashSet<>();
         for (Map.Entry<String, List<Boolean>> entry : recentResults.entrySet()) {
             List<Boolean> results = entry.getValue();
-            // 5x if last answer was wrong, OR second-to-last answer was wrong
             boolean lastWrong = !results.get(0);
             boolean secondLastWrong = results.size() > 1 && !results.get(1);
             if (lastWrong || secondLastWrong) {
@@ -429,6 +400,67 @@ public class QuestionRepository {
         }
         Collections.shuffle(result);
         return result;
+    }
+
+    /**
+     * Get the filtered question pool based on active filters.
+     * Filters are combined with UNION (OR) logic: a question is included if it matches ANY active filter.
+     * If no filters are active, returns all questions.
+     */
+    public List<Question> getFilteredPool(boolean filterRecentWrong, boolean filterWithNumbers, boolean filterUnattempted) {
+        if (!filterRecentWrong && !filterWithNumbers && !filterUnattempted) {
+            return new ArrayList<>(allQuestions);
+        }
+
+        Set<String> recentWrongIds = filterRecentWrong ? getRecentlyWrongQuestionIds() : new HashSet<>();
+        Set<String> attemptedIds = (filterUnattempted) ? new HashSet<>(dao.getAllAttemptedQuestionIds()) : new HashSet<>();
+
+        // Pre-compute number question IDs
+        Set<String> numberQuestionIds = new HashSet<>();
+        if (filterWithNumbers) {
+            for (Question q : allQuestions) {
+                if (isQuestionWithNumbers(q)) {
+                    numberQuestionIds.add(q.id);
+                }
+            }
+        }
+
+        // Union: include question if it matches any active filter
+        Set<String> includedIds = new HashSet<>();
+        for (Question q : allQuestions) {
+            if (filterRecentWrong && recentWrongIds.contains(q.id)) {
+                includedIds.add(q.id);
+            }
+            if (filterWithNumbers && numberQuestionIds.contains(q.id)) {
+                includedIds.add(q.id);
+            }
+            if (filterUnattempted && !attemptedIds.contains(q.id)) {
+                includedIds.add(q.id);
+            }
+        }
+
+        List<Question> result = new ArrayList<>();
+        for (Question q : allQuestions) {
+            if (includedIds.contains(q.id)) {
+                result.add(q);
+            }
+        }
+        return result;
+    }
+
+    private boolean isQuestionWithNumbers(Question q) {
+        if (containsDigit(q.question_zh) || containsDigit(q.question_en)) return true;
+        if (q.options_zh != null) {
+            for (String opt : q.options_zh) {
+                if (containsDigit(opt)) return true;
+            }
+        }
+        if (q.options_en != null) {
+            for (String opt : q.options_en) {
+                if (containsDigit(opt)) return true;
+            }
+        }
+        return false;
     }
 
     /**
