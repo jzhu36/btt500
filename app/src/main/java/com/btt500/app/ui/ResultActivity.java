@@ -23,6 +23,10 @@ public class ResultActivity extends AppCompatActivity {
         int correct = getIntent().getIntExtra("correct", 0);
         int total = getIntent().getIntExtra("total", 50);
 
+        // Title
+        TextView tvTitle = findViewById(R.id.tvResultTitle);
+        tvTitle.setText(zh ? "练习完成" : "Practice Complete");
+
         TextView tvScore = findViewById(R.id.tvResultScore);
         TextView tvDetail = findViewById(R.id.tvResultDetail);
         TextView tvPassFail = findViewById(R.id.tvPassFail);

@@ -49,7 +49,14 @@ public class QuestionDetailActivity extends AppCompatActivity {
             return;
         }
 
+        boolean zh = langMgr.isChinese();
         String lang = langMgr.getLanguage();
+
+        // Title bar
+        TextView tvTitle = findViewById(R.id.tvDetailTitle);
+        if (tvTitle != null) {
+            tvTitle.setText(zh ? "题目详情" : "Question Detail");
+        }
 
         // Question text — single language only
         TextView tvQuestion = findViewById(R.id.tvDetailQuestion);
@@ -119,12 +126,12 @@ public class QuestionDetailActivity extends AppCompatActivity {
         TextView tvWrongs = findViewById(R.id.tvDetailWrongs);
         int attempts = repo.getAttemptCount(questionId);
         int wrongs = repo.getWrongCount(questionId);
-        if (langMgr.isChinese()) {
-            tvAttempts.setText(getString(R.string.practiced_times, attempts));
-            tvWrongs.setText(getString(R.string.wrong_times, wrongs));
+        if (zh) {
+            tvAttempts.setText("练习 " + attempts + " 次");
+            tvWrongs.setText("错误 " + wrongs + " 次");
         } else {
-            tvAttempts.setText("Practiced: " + attempts + " times");
-            tvWrongs.setText("Wrong: " + wrongs + " times");
+            tvAttempts.setText("Practiced: " + attempts);
+            tvWrongs.setText("Wrong: " + wrongs);
         }
 
         // Records
@@ -134,10 +141,8 @@ public class QuestionDetailActivity extends AppCompatActivity {
         MaterialButton btnAll = findViewById(R.id.btnAllRecords);
         MaterialButton btnRecent = findViewById(R.id.btnRecentRecords);
 
-        if (langMgr.isEnglish()) {
-            btnAll.setText("All Records");
-            btnRecent.setText("Recent 10");
-        }
+        btnAll.setText(zh ? "全部记录" : "All Records");
+        btnRecent.setText(zh ? "最近十次" : "Recent 10");
 
         btnAll.setOnClickListener(v -> {
             showingAll = true;
@@ -154,6 +159,7 @@ public class QuestionDetailActivity extends AppCompatActivity {
 
     private void loadRecords() {
         layoutRecords.removeAllViews();
+        boolean zh = langMgr.isChinese();
 
         List<AnswerRecord> records;
         if (showingAll) {
@@ -163,7 +169,7 @@ public class QuestionDetailActivity extends AppCompatActivity {
         }
 
         if (records.isEmpty()) {
-            tvNoHistory.setText(langMgr.isChinese() ? "暂无答题记录" : "No records yet");
+            tvNoHistory.setText(zh ? "暂无答题记录" : "No records yet");
             tvNoHistory.setVisibility(View.VISIBLE);
             return;
         }
@@ -175,7 +181,7 @@ public class QuestionDetailActivity extends AppCompatActivity {
             TextView tv = new TextView(this);
             String time = sdf.format(new Date(record.timestamp));
             String result;
-            if (langMgr.isChinese()) {
+            if (zh) {
                 result = record.isCorrect ? "✓ 正确" : "✗ 错误";
             } else {
                 result = record.isCorrect ? "✓ Correct" : "✗ Incorrect";

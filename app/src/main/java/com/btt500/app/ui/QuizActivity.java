@@ -114,13 +114,20 @@ public class QuizActivity extends AppCompatActivity {
         return -1;
     }
 
+    private String formatProgress(int current, int total) {
+        if (langMgr.isChinese()) {
+            return String.format("第 %d / %d 题", current, total);
+        } else {
+            return String.format("Q %d / %d", current, total);
+        }
+    }
+
     private void showQuestion() {
         answered = false;
         Question q = questions.get(currentIndex);
         String lang = langMgr.getLanguage();
 
-        tvProgress.setText(getString(R.string.question_progress,
-                session.answeredCount + 1, session.totalQuestions));
+        tvProgress.setText(formatProgress(session.answeredCount + 1, session.totalQuestions));
         tvScore.setText(session.correctCount + " ✓");
         progressBar.setProgress(session.answeredCount);
 
@@ -232,8 +239,7 @@ public class QuizActivity extends AppCompatActivity {
         }
 
         tvScore.setText(session.correctCount + " ✓");
-        tvProgress.setText(getString(R.string.question_progress,
-                session.answeredCount, session.totalQuestions));
+        tvProgress.setText(formatProgress(session.answeredCount, session.totalQuestions));
         progressBar.setProgress(session.answeredCount);
 
         btnNext.setVisibility(View.VISIBLE);
