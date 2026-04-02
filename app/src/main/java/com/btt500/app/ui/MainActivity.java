@@ -33,7 +33,7 @@ public class MainActivity extends AppCompatActivity implements LanguageManager.O
     private LanguageManager langMgr;
     private LinearLayout layoutSessionHistory;
     private LinearLayout layoutResumeCard;
-    private CheckBox cbLastOneWrong, cbLastTwoWrong, cbWithNumbers, cbUnattempted;
+    private CheckBox cbLastOneWrong, cbLastTwoWrong, cbWithNumbers, cbUnattempted, cbSigns, cbLines;
     private TextView tvFilteredCount, tvSubtitle, tvTotalQuestions, tvFilterTitle, tvStartTitle;
     private TextView tvSessionHistoryTitle, tvLangToggle;
     private MaterialButton btnStart10, btnStart20, btnStart50, btnStartAll, btnHistory;
@@ -60,6 +60,8 @@ public class MainActivity extends AppCompatActivity implements LanguageManager.O
         cbLastTwoWrong = findViewById(R.id.cbLastTwoWrong);
         cbWithNumbers = findViewById(R.id.cbWithNumbers);
         cbUnattempted = findViewById(R.id.cbUnattempted);
+        cbSigns = findViewById(R.id.cbSigns);
+        cbLines = findViewById(R.id.cbLines);
         btnStart10 = findViewById(R.id.btnStart10);
         btnStart20 = findViewById(R.id.btnStart20);
         btnStart50 = findViewById(R.id.btnStart50);
@@ -85,6 +87,8 @@ public class MainActivity extends AppCompatActivity implements LanguageManager.O
         cbLastTwoWrong.setOnCheckedChangeListener(filterListener);
         cbWithNumbers.setOnCheckedChangeListener(filterListener);
         cbUnattempted.setOnCheckedChangeListener(filterListener);
+        cbSigns.setOnCheckedChangeListener(filterListener);
+        cbLines.setOnCheckedChangeListener(filterListener);
 
         btnStart10.setOnClickListener(v -> startFromFilter(10));
         btnStart20.setOnClickListener(v -> startFromFilter(20));
@@ -172,17 +176,23 @@ public class MainActivity extends AppCompatActivity implements LanguageManager.O
         int lastTwoWrongCount = repo.getLastTwoWrongQuestions().size();
         int withNumbersCount = repo.getQuestionsWithNumbers().size();
         int unattemptedCount = repo.getUnattemptedQuestions().size();
+        int signsCount = repo.getQuestionsAboutSigns().size();
+        int linesCount = repo.getQuestionsAboutLines().size();
 
         if (zh) {
             cbLastOneWrong.setText("最近一次做错的题 (" + lastOneWrongCount + ")");
             cbLastTwoWrong.setText("最近两次做错的题 (" + lastTwoWrongCount + ")");
             cbWithNumbers.setText("含数字的题 (" + withNumbersCount + ")");
             cbUnattempted.setText("没做过的题 (" + unattemptedCount + ")");
+            cbSigns.setText("标志与图标 (" + signsCount + ")");
+            cbLines.setText("路面标线 (" + linesCount + ")");
         } else {
             cbLastOneWrong.setText("Last answer wrong (" + lastOneWrongCount + ")");
             cbLastTwoWrong.setText("Last 2 answers wrong (" + lastTwoWrongCount + ")");
             cbWithNumbers.setText("With numbers (" + withNumbersCount + ")");
             cbUnattempted.setText("Not attempted (" + unattemptedCount + ")");
+            cbSigns.setText("Signs & icons (" + signsCount + ")");
+            cbLines.setText("Road lines (" + linesCount + ")");
         }
     }
 
@@ -190,7 +200,8 @@ public class MainActivity extends AppCompatActivity implements LanguageManager.O
         boolean zh = langMgr.isChinese();
         List<Question> pool = getFilteredPool();
         boolean anyFilter = cbLastOneWrong.isChecked() || cbLastTwoWrong.isChecked()
-                || cbWithNumbers.isChecked() || cbUnattempted.isChecked();
+                || cbWithNumbers.isChecked() || cbUnattempted.isChecked()
+                || cbSigns.isChecked() || cbLines.isChecked();
         if (zh) {
             if (anyFilter) {
                 tvFilteredCount.setText("筛选后题池：" + pool.size() + " 题");
@@ -222,7 +233,9 @@ public class MainActivity extends AppCompatActivity implements LanguageManager.O
                 cbLastOneWrong.isChecked(),
                 cbLastTwoWrong.isChecked(),
                 cbWithNumbers.isChecked(),
-                cbUnattempted.isChecked()
+                cbUnattempted.isChecked(),
+                cbSigns.isChecked(),
+                cbLines.isChecked()
         );
     }
 

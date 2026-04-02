@@ -120,6 +120,22 @@
             android:paddingStart="8dp"
             android:minHeight="44dp" />
 
+        <CheckBox
+            android:id="@+id/cbSigns"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textSize="15sp"
+            android:paddingStart="8dp"
+            android:minHeight="44dp" />
+
+        <CheckBox
+            android:id="@+id/cbLines"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textSize="15sp"
+            android:paddingStart="8dp"
+            android:minHeight="44dp" />
+
         <!-- Filtered pool info -->
         <TextView
             android:id="@+id/tvFilteredCount"
