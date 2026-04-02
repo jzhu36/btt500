@@ -21,7 +21,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 
-public class HistoryActivity extends AppCompatActivity {
+public class HistoryActivity extends AppCompatActivity implements LanguageManager.OnLanguageChangedListener {
 
     private QuestionRepository repo;
     private LanguageManager langMgr;
@@ -29,6 +29,7 @@ public class HistoryActivity extends AppCompatActivity {
     private List<QuestionRepository.QuestionStat> allStats;
     private List<QuestionRepository.QuestionStat> filteredStats;
     private TextView tvQuestionCount;
+    private TextView tvHistoryTitle;
 
     // Sort state
     private enum SortField { DEFAULT, PRACTICED, WRONG, TOPIC }
@@ -57,6 +58,7 @@ public class HistoryActivity extends AppCompatActivity {
         repo = new QuestionRepository(this);
         langMgr = LanguageManager.getInstance(this);
         tvQuestionCount = findViewById(R.id.tvQuestionCount);
+        tvHistoryTitle = findViewById(R.id.tvHistoryTitle);
 
         RecyclerView recycler = findViewById(R.id.recyclerHistory);
         recycler.setLayoutManager(new LinearLayoutManager(this));
@@ -74,16 +76,35 @@ public class HistoryActivity extends AppCompatActivity {
         btnSortWrong.setOnClickListener(v -> toggleSort(SortField.WRONG));
         btnSortTopic.setOnClickListener(v -> toggleSort(SortField.TOPIC));
 
+        langMgr.addListener(this);
+
         loadData();
-        buildFilterChips();
-        updateSortButtonLabels();
-        applyFilterAndSort();
+        refreshAllUI();
     }
 
     @Override
     protected void onResume() {
         super.onResume();
         loadData();
+        refreshAllUI();
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        langMgr.removeListener(this);
+    }
+
+    @Override
+    public void onLanguageChanged(String newLanguage) {
+        refreshAllUI();
+    }
+
+    private void refreshAllUI() {
+        boolean zh = langMgr.isChinese();
+        tvHistoryTitle.setText(zh ? "题库浏览" : "Question Bank");
+        buildFilterChips();
+        updateSortButtonLabels();
         applyFilterAndSort();
     }
 
@@ -93,9 +114,10 @@ public class HistoryActivity extends AppCompatActivity {
 
     private void buildFilterChips() {
         layoutFilterChips.removeAllViews();
+        boolean zh = langMgr.isChinese();
 
         // "All" chip
-        String allLabel = langMgr.isChinese() ? "全部" : "All";
+        String allLabel = zh ? "全部" : "All";
         addFilterChip(allLabel, TAG_ALL, () -> {
             filterTopic = null;
             filterRecentWrong = false;
@@ -104,7 +126,7 @@ public class HistoryActivity extends AppCompatActivity {
         });
 
         // "Recently wrong" chip
-        String recentWrongLabel = langMgr.isChinese() ? "最近做错" : "Recently Wrong";
+        String recentWrongLabel = zh ? "最近做错" : "Recently Wrong";
         addFilterChip(recentWrongLabel, TAG_RECENT_WRONG, () -> {
             filterRecentWrong = !filterRecentWrong;
             if (filterRecentWrong) {
@@ -211,7 +233,8 @@ public class HistoryActivity extends AppCompatActivity {
 
         Set<String> recentlyWrongIds = null;
         if (filterRecentWrong) {
-            recentlyWrongIds = repo.getRecentlyWrongQuestionIds();
+            // Use last-one-wrong for the history page filter
+            recentlyWrongIds = repo.getLastOneWrongQuestionIds();
         }
 
         for (QuestionRepository.QuestionStat stat : allStats) {
