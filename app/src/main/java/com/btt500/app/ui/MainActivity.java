@@ -27,15 +27,16 @@ import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends AppCompatActivity implements LanguageManager.OnLanguageChangedListener {
 
     private QuestionRepository repo;
     private LanguageManager langMgr;
     private LinearLayout layoutSessionHistory;
     private LinearLayout layoutResumeCard;
-    private CheckBox cbRecentWrong, cbWithNumbers, cbUnattempted;
-    private TextView tvFilteredCount;
-    private MaterialButton btnLanguage;
+    private CheckBox cbLastOneWrong, cbLastTwoWrong, cbWithNumbers, cbUnattempted;
+    private TextView tvFilteredCount, tvSubtitle, tvTotalQuestions, tvFilterTitle, tvStartTitle;
+    private TextView tvSessionHistoryTitle, tvLangToggle;
+    private MaterialButton btnStart10, btnStart20, btnStart50, btnStartAll, btnHistory;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -45,33 +46,43 @@ public class MainActivity extends AppCompatActivity {
         repo = new QuestionRepository(this);
         langMgr = LanguageManager.getInstance(this);
 
-        MaterialButton btnStart10 = findViewById(R.id.btnStart10);
-        MaterialButton btnStart20 = findViewById(R.id.btnStart20);
-        MaterialButton btnStart50 = findViewById(R.id.btnStart50);
-        MaterialButton btnStartAll = findViewById(R.id.btnStartAll);
-        MaterialButton btnHistory = findViewById(R.id.btnHistory);
-        TextView tvTotal = findViewById(R.id.tvTotalQuestions);
+        // Bind views
+        tvSubtitle = findViewById(R.id.tvSubtitle);
+        tvTotalQuestions = findViewById(R.id.tvTotalQuestions);
+        tvFilterTitle = findViewById(R.id.tvFilterTitle);
+        tvStartTitle = findViewById(R.id.tvStartTitle);
+        tvFilteredCount = findViewById(R.id.tvFilteredCount);
+        tvSessionHistoryTitle = findViewById(R.id.tvSessionHistoryTitle);
+        tvLangToggle = findViewById(R.id.tvLangToggle);
         layoutResumeCard = findViewById(R.id.layoutResumeCard);
         layoutSessionHistory = findViewById(R.id.layoutSessionHistory);
-        cbRecentWrong = findViewById(R.id.cbRecentWrong);
+        cbLastOneWrong = findViewById(R.id.cbLastOneWrong);
+        cbLastTwoWrong = findViewById(R.id.cbLastTwoWrong);
         cbWithNumbers = findViewById(R.id.cbWithNumbers);
         cbUnattempted = findViewById(R.id.cbUnattempted);
-        tvFilteredCount = findViewById(R.id.tvFilteredCount);
-        btnLanguage = findViewById(R.id.btnLanguage);
+        btnStart10 = findViewById(R.id.btnStart10);
+        btnStart20 = findViewById(R.id.btnStart20);
+        btnStart50 = findViewById(R.id.btnStart50);
+        btnStartAll = findViewById(R.id.btnStartAll);
+        btnHistory = findViewById(R.id.btnHistory);
 
-        int total = repo.getTotalQuestionCount();
-        tvTotal.setText(getString(R.string.total_questions, total));
-
-        // Language toggle
-        updateLanguageButton();
-        btnLanguage.setOnClickListener(v -> {
-            langMgr.toggleLanguage();
-            updateLanguageButton();
+        // Language toggle: tap to switch
+        tvLangToggle.setOnClickListener(v -> {
+            if (langMgr.isChinese()) {
+                langMgr.setLanguage(LanguageManager.LANG_EN);
+            } else {
+                langMgr.setLanguage(LanguageManager.LANG_ZH);
+            }
+            // onLanguageChanged callback will refresh UI
         });
 
         // Checkbox change listeners
-        CompoundButton.OnCheckedChangeListener filterListener = (buttonView, isChecked) -> updateFilteredCount();
-        cbRecentWrong.setOnCheckedChangeListener(filterListener);
+        CompoundButton.OnCheckedChangeListener filterListener = (buttonView, isChecked) -> {
+            updateFilteredCount();
+            updateStartAllButton();
+        };
+        cbLastOneWrong.setOnCheckedChangeListener(filterListener);
+        cbLastTwoWrong.setOnCheckedChangeListener(filterListener);
         cbWithNumbers.setOnCheckedChangeListener(filterListener);
         cbUnattempted.setOnCheckedChangeListener(filterListener);
 
@@ -83,46 +94,104 @@ public class MainActivity extends AppCompatActivity {
         btnHistory.setOnClickListener(v -> {
             startActivity(new Intent(this, HistoryActivity.class));
         });
+
+        // Register language change listener
+        langMgr.addListener(this);
+
+        // Initial UI update
+        refreshAllUI();
     }
 
     @Override
     protected void onResume() {
         super.onResume();
-        updateLanguageButton();
+        refreshAllUI();
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        langMgr.removeListener(this);
+    }
+
+    @Override
+    public void onLanguageChanged(String newLanguage) {
+        // Immediately refresh all UI when language changes
+        refreshAllUI();
+    }
+
+    /**
+     * Refresh all UI elements based on current language setting.
+     */
+    private void refreshAllUI() {
+        boolean zh = langMgr.isChinese();
+        int total = repo.getTotalQuestionCount();
+
+        // Language toggle text: show the OTHER language as the switch target
+        if (zh) {
+            tvLangToggle.setText("EN");
+        } else {
+            tvLangToggle.setText("\u4E2D");
+        }
+
+        // Subtitle
+        tvSubtitle.setText(zh ? "新加坡基本交通理论考试" : "Singapore Basic Theory Test");
+
+        // Total questions
+        tvTotalQuestions.setText(zh ? "题库共 " + total + " 题" : total + " questions");
+
+        // Filter title
+        tvFilterTitle.setText(zh ? "题目筛选" : "Question Filters");
+
+        // Filter labels with counts
         updateFilterLabels();
+
+        // Filtered count
         updateFilteredCount();
+
+        // Start title
+        tvStartTitle.setText(zh ? "选择题数开始练习" : "Select question count");
+
+        // Start buttons
+        btnStart10.setText(zh ? "10 题" : "10 Q");
+        btnStart20.setText(zh ? "20 题" : "20 Q");
+        btnStart50.setText(zh ? "50 题" : "50 Q");
+        updateStartAllButton();
+
+        // Browse button
+        btnHistory.setText(zh ? "浏览题库" : "Browse Questions");
+
+        // Resume card and session history
         refreshResumeCard();
         refreshSessionHistory();
     }
 
-    private void updateLanguageButton() {
-        if (langMgr.isChinese()) {
-            btnLanguage.setText("当前：中文 | 切换为 English");
-        } else {
-            btnLanguage.setText("Current: English | Switch to 中文");
-        }
-    }
-
     private void updateFilterLabels() {
-        int recentWrongCount = repo.getRecentlyWrongQuestions().size();
+        boolean zh = langMgr.isChinese();
+        int lastOneWrongCount = repo.getLastOneWrongQuestions().size();
+        int lastTwoWrongCount = repo.getLastTwoWrongQuestions().size();
         int withNumbersCount = repo.getQuestionsWithNumbers().size();
         int unattemptedCount = repo.getUnattemptedQuestions().size();
 
-        if (langMgr.isChinese()) {
-            cbRecentWrong.setText("最近做错的题 (" + recentWrongCount + ")");
+        if (zh) {
+            cbLastOneWrong.setText("最近一次做错的题 (" + lastOneWrongCount + ")");
+            cbLastTwoWrong.setText("最近两次做错的题 (" + lastTwoWrongCount + ")");
             cbWithNumbers.setText("含数字的题 (" + withNumbersCount + ")");
             cbUnattempted.setText("没做过的题 (" + unattemptedCount + ")");
         } else {
-            cbRecentWrong.setText("Recently Wrong (" + recentWrongCount + ")");
-            cbWithNumbers.setText("With Numbers (" + withNumbersCount + ")");
-            cbUnattempted.setText("Not Attempted (" + unattemptedCount + ")");
+            cbLastOneWrong.setText("Last answer wrong (" + lastOneWrongCount + ")");
+            cbLastTwoWrong.setText("Last 2 answers wrong (" + lastTwoWrongCount + ")");
+            cbWithNumbers.setText("With numbers (" + withNumbersCount + ")");
+            cbUnattempted.setText("Not attempted (" + unattemptedCount + ")");
         }
     }
 
     private void updateFilteredCount() {
+        boolean zh = langMgr.isChinese();
         List<Question> pool = getFilteredPool();
-        boolean anyFilter = cbRecentWrong.isChecked() || cbWithNumbers.isChecked() || cbUnattempted.isChecked();
-        if (langMgr.isChinese()) {
+        boolean anyFilter = cbLastOneWrong.isChecked() || cbLastTwoWrong.isChecked()
+                || cbWithNumbers.isChecked() || cbUnattempted.isChecked();
+        if (zh) {
             if (anyFilter) {
                 tvFilteredCount.setText("筛选后题池：" + pool.size() + " 题");
             } else {
@@ -137,9 +206,21 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    private void updateStartAllButton() {
+        boolean zh = langMgr.isChinese();
+        List<Question> pool = getFilteredPool();
+        int count = pool.size();
+        if (zh) {
+            btnStartAll.setText("做全部 (" + count + " 题)");
+        } else {
+            btnStartAll.setText("Do All (" + count + " Q)");
+        }
+    }
+
     private List<Question> getFilteredPool() {
         return repo.getFilteredPool(
-                cbRecentWrong.isChecked(),
+                cbLastOneWrong.isChecked(),
+                cbLastTwoWrong.isChecked(),
                 cbWithNumbers.isChecked(),
                 cbUnattempted.isChecked()
         );
@@ -175,6 +256,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void refreshResumeCard() {
+        boolean zh = langMgr.isChinese();
         layoutResumeCard.removeAllViews();
         QuizSession incomplete = repo.getIncompleteSession();
         if (incomplete != null) {
@@ -191,14 +273,14 @@ public class MainActivity extends AppCompatActivity {
             card.setBackground(bg);
 
             TextView tvTitle = new TextView(this);
-            tvTitle.setText(langMgr.isChinese() ? "有未完成的练习" : "Incomplete Session");
+            tvTitle.setText(zh ? "有未完成的练习" : "Incomplete Session");
             tvTitle.setTextSize(16);
             tvTitle.setTypeface(null, Typeface.BOLD);
             tvTitle.setTextColor(Color.parseColor("#E65100"));
             card.addView(tvTitle);
 
             TextView tvInfo = new TextView(this);
-            if (langMgr.isChinese()) {
+            if (zh) {
                 tvInfo.setText(String.format("已完成 %d/%d 题 · 正确 %d 题",
                         incomplete.answeredCount, incomplete.totalQuestions, incomplete.correctCount));
             } else {
@@ -214,7 +296,7 @@ public class MainActivity extends AppCompatActivity {
             card.addView(tvInfo);
 
             MaterialButton btnResume = new MaterialButton(this);
-            btnResume.setText(langMgr.isChinese() ? "继续练习" : "Resume");
+            btnResume.setText(zh ? "继续练习" : "Resume");
             btnResume.setTextSize(14);
             LinearLayout.LayoutParams btnParams = new LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.MATCH_PARENT, dpToPx(44));
@@ -234,26 +316,19 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void refreshSessionHistory() {
+        boolean zh = langMgr.isChinese();
         layoutSessionHistory.removeAllViews();
         List<QuizSession> sessions = repo.getCompletedSessions();
 
         if (sessions.isEmpty()) {
             layoutSessionHistory.setVisibility(View.GONE);
+            tvSessionHistoryTitle.setVisibility(View.GONE);
             return;
         }
 
         layoutSessionHistory.setVisibility(View.VISIBLE);
-
-        TextView tvSectionTitle = new TextView(this);
-        tvSectionTitle.setText(langMgr.isChinese() ? "练习历史" : "Practice History");
-        tvSectionTitle.setTextSize(18);
-        tvSectionTitle.setTypeface(null, Typeface.BOLD);
-        tvSectionTitle.setTextColor(getResources().getColor(R.color.dark_text, null));
-        LinearLayout.LayoutParams titleParams = new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-        titleParams.bottomMargin = 12;
-        tvSectionTitle.setLayoutParams(titleParams);
-        layoutSessionHistory.addView(tvSectionTitle);
+        tvSessionHistoryTitle.setVisibility(View.VISIBLE);
+        tvSessionHistoryTitle.setText(zh ? "练习历史" : "Practice History");
 
         SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault());
 
@@ -303,7 +378,7 @@ public class MainActivity extends AppCompatActivity {
 
             TextView tvStats = new TextView(this);
             int wrongCount = s.totalQuestions - s.correctCount;
-            if (langMgr.isChinese()) {
+            if (zh) {
                 tvStats.setText(String.format("共 %d 题 · 正确 %d · 错误 %d",
                         s.totalQuestions, s.correctCount, wrongCount));
             } else {
