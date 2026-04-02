@@ -11,8 +11,9 @@
         android:orientation="vertical"
         android:padding="24dp">
 
-        <!-- Header -->
+        <!-- Title centered -->
         <TextView
+            android:id="@+id/tvTitle"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="@string/app_name"
@@ -22,35 +23,51 @@
             android:layout_gravity="center_horizontal"
             android:layout_marginTop="24dp" />
 
+        <!-- Subtitle -->
         <TextView
+            android:id="@+id/tvSubtitle"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="新加坡基本交通理论考试"
             android:textSize="16sp"
             android:textColor="@color/medium_gray"
             android:layout_gravity="center_horizontal"
             android:layout_marginTop="4dp" />
 
-        <TextView
-            android:id="@+id/tvTotalQuestions"
-            android:layout_width="wrap_content"
+        <!-- Total questions + language toggle on same row -->
+        <LinearLayout
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:textSize="14sp"
-            android:textColor="@color/medium_gray"
-            android:layout_gravity="center_horizontal"
-            android:layout_marginTop="4dp" />
+            android:orientation="horizontal"
+            android:gravity="center"
+            android:layout_marginTop="4dp"
+            android:layout_marginBottom="24dp">
 
-        <!-- Language toggle -->
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnLanguage"
-            android:layout_width="wrap_content"
-            android:layout_height="40dp"
-            android:text="切换为 English"
-            android:textSize="14sp"
-            android:layout_gravity="center_horizontal"
-            android:layout_marginTop="8dp"
-            android:layout_marginBottom="24dp"
-            style="@style/Widget.MaterialComponents.Button.TextButton" />
+            <TextView
+                android:id="@+id/tvTotalQuestions"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textSize="14sp"
+                android:textColor="@color/medium_gray" />
+
+            <View
+                android:layout_width="1dp"
+                android:layout_height="14dp"
+                android:background="@color/medium_gray"
+                android:layout_marginStart="12dp"
+                android:layout_marginEnd="12dp" />
+
+            <TextView
+                android:id="@+id/tvLangToggle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textSize="14sp"
+                android:textColor="@color/primary"
+                android:textStyle="bold"
+                android:paddingStart="8dp"
+                android:paddingEnd="8dp"
+                android:paddingTop="2dp"
+                android:paddingBottom="2dp" />
+        </LinearLayout>
 
         <!-- Resume incomplete session card -->
         <LinearLayout
@@ -63,19 +80,26 @@
 
         <!-- Filter Section -->
         <TextView
+            android:id="@+id/tvFilterTitle"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="题目筛选"
             android:textSize="16sp"
             android:textStyle="bold"
             android:textColor="@color/dark_text"
             android:layout_marginBottom="8dp" />
 
         <CheckBox
-            android:id="@+id/cbRecentWrong"
+            android:id="@+id/cbLastOneWrong"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="最近做错的题"
+            android:textSize="15sp"
+            android:paddingStart="8dp"
+            android:minHeight="44dp" />
+
+        <CheckBox
+            android:id="@+id/cbLastTwoWrong"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
             android:textSize="15sp"
             android:paddingStart="8dp"
             android:minHeight="44dp" />
@@ -84,7 +108,6 @@
             android:id="@+id/cbWithNumbers"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="含数字的题"
             android:textSize="15sp"
             android:paddingStart="8dp"
             android:minHeight="44dp" />
@@ -93,7 +116,6 @@
             android:id="@+id/cbUnattempted"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="没做过的题"
             android:textSize="15sp"
             android:paddingStart="8dp"
             android:minHeight="44dp" />
@@ -103,7 +125,6 @@
             android:id="@+id/tvFilteredCount"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="当前题池：610 题"
             android:textSize="14sp"
             android:textColor="@color/primary"
             android:textStyle="bold"
@@ -112,9 +133,9 @@
 
         <!-- Start buttons -->
         <TextView
+            android:id="@+id/tvStartTitle"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="选择题数开始练习"
             android:textSize="16sp"
             android:textStyle="bold"
             android:textColor="@color/dark_text"
@@ -131,7 +152,6 @@
                 android:layout_width="0dp"
                 android:layout_height="56dp"
                 android:layout_weight="1"
-                android:text="10 题"
                 android:textSize="16sp"
                 android:layout_marginEnd="8dp"
                 style="@style/Widget.MaterialComponents.Button.OutlinedButton" />
@@ -141,7 +161,6 @@
                 android:layout_width="0dp"
                 android:layout_height="56dp"
                 android:layout_weight="1"
-                android:text="20 题"
                 android:textSize="16sp"
                 android:layout_marginEnd="8dp"
                 style="@style/Widget.MaterialComponents.Button.OutlinedButton" />
@@ -151,7 +170,6 @@
                 android:layout_width="0dp"
                 android:layout_height="56dp"
                 android:layout_weight="1"
-                android:text="50 题"
                 android:textSize="16sp" />
         </LinearLayout>
 
@@ -159,7 +177,6 @@
             android:id="@+id/btnStartAll"
             android:layout_width="match_parent"
             android:layout_height="48dp"
-            android:text="全部做完"
             android:textSize="15sp"
             style="@style/Widget.MaterialComponents.Button.OutlinedButton"
             android:layout_marginBottom="24dp" />
@@ -169,10 +186,20 @@
             android:id="@+id/btnHistory"
             android:layout_width="match_parent"
             android:layout_height="48dp"
-            android:text="@string/view_history"
             android:textSize="15sp"
             style="@style/Widget.MaterialComponents.Button.OutlinedButton"
             android:layout_marginBottom="24dp" />
+
+        <!-- Session history title -->
+        <TextView
+            android:id="@+id/tvSessionHistoryTitle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:textColor="@color/dark_text"
+            android:layout_marginBottom="8dp"
+            android:visibility="gone" />
 
         <!-- Session history -->
         <LinearLayout
