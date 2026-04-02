@@ -15,6 +15,7 @@
         android:background="@color/primary">
 
         <TextView
+            android:id="@+id/tvDetailTitle"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="@string/question_detail"
