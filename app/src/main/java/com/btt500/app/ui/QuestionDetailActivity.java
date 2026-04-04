@@ -30,8 +30,11 @@ public class QuestionDetailActivity extends AppCompatActivity {
     private QuestionRepository repo;
     private LanguageManager langMgr;
     private String questionId;
-    private LinearLayout layoutRecords;
-    private TextView tvNoHistory;
+    private Question question;
+    private LinearLayout layoutRecords, layoutOptions;
+    private TextView tvNoHistory, tvTitle, tvQuestion, tvQuestionEn, tvAttempts, tvWrongs, tvLangToggle;
+    private ImageView ivDetailImage;
+    private MaterialButton btnAll, btnRecent;
     private boolean showingAll = true;
 
     @Override
@@ -42,67 +45,85 @@ public class QuestionDetailActivity extends AppCompatActivity {
         questionId = getIntent().getStringExtra("questionId");
         repo = new QuestionRepository(this);
         langMgr = LanguageManager.getInstance(this);
-        Question q = repo.getQuestionById(questionId);
+        question = repo.getQuestionById(questionId);
 
-        if (q == null) {
+        if (question == null) {
             finish();
             return;
         }
 
-        boolean zh = langMgr.isChinese();
-        String lang = langMgr.getLanguage();
+        // Bind views
+        tvTitle = findViewById(R.id.tvDetailTitle);
+        tvQuestion = findViewById(R.id.tvDetailQuestion);
+        tvQuestionEn = findViewById(R.id.tvDetailQuestionEn);
+        ivDetailImage = findViewById(R.id.ivDetailImage);
+        layoutOptions = findViewById(R.id.layoutDetailOptions);
+        tvAttempts = findViewById(R.id.tvDetailAttempts);
+        tvWrongs = findViewById(R.id.tvDetailWrongs);
+        layoutRecords = findViewById(R.id.layoutRecords);
+        tvNoHistory = findViewById(R.id.tvNoHistory);
+        btnAll = findViewById(R.id.btnAllRecords);
+        btnRecent = findViewById(R.id.btnRecentRecords);
+        tvLangToggle = findViewById(R.id.tvDetailLangToggle);
 
-        // Title bar
-        TextView tvTitle = findViewById(R.id.tvDetailTitle);
-        if (tvTitle != null) {
-            tvTitle.setText(zh ? "题目详情" : "Question Detail");
-        }
+        // Language toggle
+        updateLangToggleText();
+        tvLangToggle.setOnClickListener(v -> {
+            langMgr.toggleLanguage();
+            updateLangToggleText();
+            refreshUI();
+        });
 
-        // Question text — single language only
-        TextView tvQuestion = findViewById(R.id.tvDetailQuestion);
-        tvQuestion.setText(q.getQuestionText(lang));
-
-        // Hide the English subtitle since we now use single language
-        TextView tvQuestionEn = findViewById(R.id.tvDetailQuestionEn);
+        // Hide English subtitle (single language mode)
         if (tvQuestionEn != null) {
             tvQuestionEn.setVisibility(View.GONE);
         }
 
-        // Question image
-        ImageView ivDetailImage = findViewById(R.id.ivDetailImage);
-        if (q.images != null && !q.images.isEmpty()) {
-            String imageName = q.images.get(0);
-            try {
-                InputStream is = getAssets().open("images/" + imageName);
-                Bitmap bitmap = BitmapFactory.decodeStream(is);
-                is.close();
-                if (bitmap != null) {
-                    ivDetailImage.setImageBitmap(bitmap);
-                    ivDetailImage.setVisibility(View.VISIBLE);
-                }
-            } catch (Exception e) {
-                ivDetailImage.setVisibility(View.GONE);
-            }
-        } else {
-            ivDetailImage.setVisibility(View.GONE);
-        }
+        // Load image
+        loadQuestionImage();
 
-        // Options with correct highlighted — single language only
-        LinearLayout layoutOptions = findViewById(R.id.layoutDetailOptions);
+        // Record tabs
+        btnAll.setOnClickListener(v -> {
+            showingAll = true;
+            loadRecords();
+        });
+        btnRecent.setOnClickListener(v -> {
+            showingAll = false;
+            loadRecords();
+        });
+
+        refreshUI();
+    }
+
+    private void updateLangToggleText() {
+        tvLangToggle.setText(langMgr.isChinese() ? "EN" : "\u4e2d");
+    }
+
+    private void refreshUI() {
+        boolean zh = langMgr.isChinese();
+        String lang = langMgr.getLanguage();
+
+        // Title
+        tvTitle.setText(zh ? "\u9898\u76ee\u8be6\u60c5" : "Question Detail");
+
+        // Question text
+        tvQuestion.setText(question.getQuestionText(lang));
+
+        // Options
+        layoutOptions.removeAllViews();
         char[] labels = {'A', 'B', 'C', 'D'};
-        List<String> options = q.getOptions(lang);
+        List<String> options = question.getOptions(lang);
         if (options != null) {
             for (int i = 0; i < options.size(); i++) {
                 TextView optView = new TextView(this);
                 String label = (i < labels.length) ? labels[i] + ". " : "";
-                String text = label + options.get(i);
-                optView.setText(text);
+                optView.setText(label + options.get(i));
                 optView.setTextSize(18);
                 optView.setPadding(24, 20, 24, 20);
 
                 GradientDrawable bg = new GradientDrawable();
                 bg.setCornerRadius(10);
-                if (i == q.correct_answer) {
+                if (i == question.correct_answer) {
                     bg.setColor(Color.parseColor("#C8E6C9"));
                     bg.setStroke(2, getResources().getColor(R.color.correct_green, null));
                 } else {
@@ -122,39 +143,40 @@ public class QuestionDetailActivity extends AppCompatActivity {
         }
 
         // Stats
-        TextView tvAttempts = findViewById(R.id.tvDetailAttempts);
-        TextView tvWrongs = findViewById(R.id.tvDetailWrongs);
         int attempts = repo.getAttemptCount(questionId);
         int wrongs = repo.getWrongCount(questionId);
         if (zh) {
-            tvAttempts.setText("练习 " + attempts + " 次");
-            tvWrongs.setText("错误 " + wrongs + " 次");
+            tvAttempts.setText("\u7ec3\u4e60 " + attempts + " \u6b21");
+            tvWrongs.setText("\u9519\u8bef " + wrongs + " \u6b21");
         } else {
             tvAttempts.setText("Practiced: " + attempts);
             tvWrongs.setText("Wrong: " + wrongs);
         }
 
-        // Records
-        layoutRecords = findViewById(R.id.layoutRecords);
-        tvNoHistory = findViewById(R.id.tvNoHistory);
-
-        MaterialButton btnAll = findViewById(R.id.btnAllRecords);
-        MaterialButton btnRecent = findViewById(R.id.btnRecentRecords);
-
-        btnAll.setText(zh ? "全部记录" : "All Records");
-        btnRecent.setText(zh ? "最近十次" : "Recent 10");
-
-        btnAll.setOnClickListener(v -> {
-            showingAll = true;
-            loadRecords();
-        });
-
-        btnRecent.setOnClickListener(v -> {
-            showingAll = false;
-            loadRecords();
-        });
+        // Tab buttons
+        btnAll.setText(zh ? "\u5168\u90e8\u8bb0\u5f55" : "All Records");
+        btnRecent.setText(zh ? "\u6700\u8fd1\u5341\u6b21" : "Recent 10");
 
         loadRecords();
+    }
+
+    private void loadQuestionImage() {
+        if (question.images != null && !question.images.isEmpty()) {
+            String imageName = question.images.get(0);
+            try {
+                InputStream is = getAssets().open("images/" + imageName);
+                Bitmap bitmap = BitmapFactory.decodeStream(is);
+                is.close();
+                if (bitmap != null) {
+                    ivDetailImage.setImageBitmap(bitmap);
+                    ivDetailImage.setVisibility(View.VISIBLE);
+                    return;
+                }
+            } catch (Exception e) {
+                // ignore
+            }
+        }
+        ivDetailImage.setVisibility(View.GONE);
     }
 
     private void loadRecords() {
@@ -169,7 +191,7 @@ public class QuestionDetailActivity extends AppCompatActivity {
         }
 
         if (records.isEmpty()) {
-            tvNoHistory.setText(zh ? "暂无答题记录" : "No records yet");
+            tvNoHistory.setText(zh ? "\u6682\u65e0\u7b54\u9898\u8bb0\u5f55" : "No records yet");
             tvNoHistory.setVisibility(View.VISIBLE);
             return;
         }
@@ -182,9 +204,9 @@ public class QuestionDetailActivity extends AppCompatActivity {
             String time = sdf.format(new Date(record.timestamp));
             String result;
             if (zh) {
-                result = record.isCorrect ? "✓ 正确" : "✗ 错误";
+                result = record.isCorrect ? "\u2713 \u6b63\u786e" : "\u2717 \u9519\u8bef";
             } else {
-                result = record.isCorrect ? "✓ Correct" : "✗ Incorrect";
+                result = record.isCorrect ? "\u2713 Correct" : "\u2717 Incorrect";
             }
             tv.setText(time + "  " + result);
             tv.setTextSize(14);
