@@ -30,6 +30,7 @@ public class HistoryActivity extends AppCompatActivity implements LanguageManage
     private List<QuestionRepository.QuestionStat> filteredStats;
     private TextView tvQuestionCount;
     private TextView tvHistoryTitle;
+    private TextView tvHistoryLangToggle;
 
     // Sort state
     private enum SortField { DEFAULT, PRACTICED, WRONG, TOPIC }
@@ -59,6 +60,16 @@ public class HistoryActivity extends AppCompatActivity implements LanguageManage
         langMgr = LanguageManager.getInstance(this);
         tvQuestionCount = findViewById(R.id.tvQuestionCount);
         tvHistoryTitle = findViewById(R.id.tvHistoryTitle);
+        tvHistoryLangToggle = findViewById(R.id.tvHistoryLangToggle);
+
+        // Language toggle button
+        if (tvHistoryLangToggle != null) {
+            updateLangToggleText();
+            tvHistoryLangToggle.setOnClickListener(v -> {
+                langMgr.toggleLanguage();
+                // onLanguageChanged callback will refresh UI
+            });
+        }
 
         RecyclerView recycler = findViewById(R.id.recyclerHistory);
         recycler.setLayoutManager(new LinearLayoutManager(this));
@@ -103,9 +114,16 @@ public class HistoryActivity extends AppCompatActivity implements LanguageManage
     private void refreshAllUI() {
         boolean zh = langMgr.isChinese();
         tvHistoryTitle.setText(zh ? "题库浏览" : "Question Bank");
+        updateLangToggleText();
         buildFilterChips();
         updateSortButtonLabels();
         applyFilterAndSort();
+    }
+
+    private void updateLangToggleText() {
+        if (tvHistoryLangToggle != null && langMgr != null) {
+            tvHistoryLangToggle.setText(langMgr.isChinese() ? "EN" : "中");
+        }
     }
 
     private void loadData() {

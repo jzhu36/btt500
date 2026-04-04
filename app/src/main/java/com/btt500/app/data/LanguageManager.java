@@ -73,8 +73,14 @@ public class LanguageManager {
     }
 
     private void notifyListeners() {
-        for (OnLanguageChangedListener l : listeners) {
-            l.onLanguageChanged(currentLanguage);
+        // Create a copy to avoid ConcurrentModificationException
+        List<OnLanguageChangedListener> snapshot = new ArrayList<>(listeners);
+        for (OnLanguageChangedListener l : snapshot) {
+            try {
+                l.onLanguageChanged(currentLanguage);
+            } catch (Exception e) {
+                // Prevent one listener's failure from affecting others
+            }
         }
     }
 }
