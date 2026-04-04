@@ -48,6 +48,9 @@ public class QuizActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_quiz);
 
+        repo = new QuestionRepository(this);
+        langMgr = LanguageManager.getInstance(this);
+
         tvProgress = findViewById(R.id.tvProgress);
         tvScore = findViewById(R.id.tvScore);
         tvQuestion = findViewById(R.id.tvQuestion);
@@ -70,9 +73,6 @@ public class QuizActivity extends AppCompatActivity {
         if (tvQuestionEn != null) {
             tvQuestionEn.setVisibility(View.GONE);
         }
-
-        repo = new QuestionRepository(this);
-        langMgr = LanguageManager.getInstance(this);
 
         long sessionId = getIntent().getLongExtra(EXTRA_SESSION_ID, -1);
         int questionCount = getIntent().getIntExtra(EXTRA_QUESTION_COUNT, 50);
