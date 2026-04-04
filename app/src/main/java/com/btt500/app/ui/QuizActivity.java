@@ -37,7 +37,7 @@ public class QuizActivity extends AppCompatActivity {
     private int currentIndex = 0;
     private boolean answered = false;
 
-    private TextView tvProgress, tvScore, tvQuestion, tvFeedback, tvCorrectAnswer;
+    private TextView tvProgress, tvScore, tvQuestion, tvFeedback, tvCorrectAnswer, tvLangToggle;
     private ImageView ivQuestionImage;
     private LinearLayout layoutOptions;
     private ProgressBar progressBar;
@@ -57,6 +57,13 @@ public class QuizActivity extends AppCompatActivity {
         layoutOptions = findViewById(R.id.layoutOptions);
         progressBar = findViewById(R.id.progressBar);
         btnNext = findViewById(R.id.btnNext);
+        tvLangToggle = findViewById(R.id.tvLangToggle);
+        updateLangToggleText();
+        tvLangToggle.setOnClickListener(v -> {
+            langMgr.toggleLanguage();
+            updateLangToggleText();
+            refreshCurrentQuestion();
+        });
 
         // Hide the English subtitle TextView since we now use single language
         TextView tvQuestionEn = findViewById(R.id.tvQuestionEn);
@@ -102,6 +109,85 @@ public class QuizActivity extends AppCompatActivity {
         });
 
         showQuestion();
+    }
+
+    private void updateLangToggleText() {
+        tvLangToggle.setText(langMgr.isChinese() ? "EN" : "中");
+    }
+
+    private void refreshCurrentQuestion() {
+        if (answered) {
+            // Re-render the answered state
+            showAnsweredQuestion();
+        } else {
+            showQuestion();
+        }
+    }
+
+    private void showAnsweredQuestion() {
+        Question q = questions.get(currentIndex);
+        String lang = langMgr.getLanguage();
+
+        tvProgress.setText(formatProgress(session.answeredCount, session.totalQuestions));
+        tvQuestion.setText(q.getQuestionText(lang));
+
+        // Rebuild options with answer highlighting
+        layoutOptions.removeAllViews();
+        List<String> options = q.getOptions(lang);
+        if (options == null) return;
+        char[] labels = {'A', 'B', 'C', 'D'};
+
+        // Find which option was selected by checking session results
+        String resultStr = sessionResults.get(currentIndex);
+        int selectedIndex = -1;
+        boolean isCorrect = "C".equals(resultStr);
+        if (!isCorrect) {
+            // Find selected by elimination - we know correct_answer and result was wrong
+            // We can't recover exact selection, so just show correct/wrong state
+        }
+
+        for (int i = 0; i < options.size(); i++) {
+            TextView optView = new TextView(this);
+            String label = (i < labels.length) ? labels[i] + ". " : "";
+            optView.setText(label + options.get(i));
+            optView.setTextSize(18);
+            optView.setPadding(28, 24, 28, 24);
+
+            GradientDrawable bg = new GradientDrawable();
+            bg.setCornerRadius(12);
+            if (i == q.correct_answer) {
+                bg.setColor(Color.parseColor("#C8E6C9"));
+                bg.setStroke(2, getResources().getColor(R.color.correct_green, null));
+            } else {
+                bg.setColor(Color.parseColor("#EEEEEE"));
+                bg.setStroke(1, Color.parseColor("#BDBDBD"));
+            }
+            optView.setBackground(bg);
+
+            LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+            );
+            params.bottomMargin = 12;
+            optView.setLayoutParams(params);
+            layoutOptions.addView(optView);
+        }
+
+        // Update feedback text
+        if (isCorrect) {
+            tvFeedback.setText(langMgr.isChinese() ? "\u2713 \u6b63\u786e" : "\u2713 Correct");
+        } else {
+            tvFeedback.setText(langMgr.isChinese() ? "\u2717 \u9519\u8bef" : "\u2717 Incorrect");
+            String correctLabel = langMgr.isChinese() ? "\u6b63\u786e\u7b54\u6848\uff1a" : "Correct answer: ";
+            tvCorrectAnswer.setText(correctLabel + q.getCorrectOptionText(lang));
+        }
+
+        // Update next button text
+        if (session.isCompleted) {
+            btnNext.setText(langMgr.isChinese() ? "\u5b8c\u6210" : "Finish");
+        } else {
+            btnNext.setText(langMgr.isChinese() ? "\u4e0b\u4e00\u9898" : "Next");
+        }
     }
 
     private int findNextUnanswered(int startFrom) {
