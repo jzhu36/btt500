@@ -25,5 +25,5 @@
     <string name="recent_records">最近十次</string>
     <string name="correct_answer">正确答案: %1$s</string>
     <string name="filter_all">全部</string>
-    <string name="filter_recent_wrong">最近做错</string>
+    <string name="filter_recent_wrong">上次答错</string>
 </resources>

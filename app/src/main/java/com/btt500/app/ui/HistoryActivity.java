@@ -143,8 +143,8 @@ public class HistoryActivity extends AppCompatActivity implements LanguageManage
             applyFilterAndSort();
         });
 
-        // "Recently wrong" chip
-        String recentWrongLabel = zh ? "最近做错" : "Recently Wrong";
+        // "Last attempt wrong" chip
+        String recentWrongLabel = zh ? "上次答错" : "Last Attempt Wrong";
         addFilterChip(recentWrongLabel, TAG_RECENT_WRONG, () -> {
             filterRecentWrong = !filterRecentWrong;
             if (filterRecentWrong) {

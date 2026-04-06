@@ -180,15 +180,15 @@ public class MainActivity extends AppCompatActivity implements LanguageManager.O
         int linesCount = repo.getQuestionsAboutLines().size();
 
         if (zh) {
-            cbLastOneWrong.setText("最近一次做错的题 (" + lastOneWrongCount + ")");
-            cbLastTwoWrong.setText("最近两次做错的题 (" + lastTwoWrongCount + ")");
+            cbLastOneWrong.setText("上次答错 (" + lastOneWrongCount + ")");
+            cbLastTwoWrong.setText("近两次有错 (" + lastTwoWrongCount + ")");
             cbWithNumbers.setText("含数字的题 (" + withNumbersCount + ")");
             cbUnattempted.setText("没做过的题 (" + unattemptedCount + ")");
             cbSigns.setText("标志与图标 (" + signsCount + ")");
             cbLines.setText("路面标线 (" + linesCount + ")");
         } else {
-            cbLastOneWrong.setText("Last answer wrong (" + lastOneWrongCount + ")");
-            cbLastTwoWrong.setText("Last 2 answers wrong (" + lastTwoWrongCount + ")");
+            cbLastOneWrong.setText("Last attempt wrong (" + lastOneWrongCount + ")");
+            cbLastTwoWrong.setText("Wrong in last 2 attempts (" + lastTwoWrongCount + ")");
             cbWithNumbers.setText("With numbers (" + withNumbersCount + ")");
             cbUnattempted.setText("Not attempted (" + unattemptedCount + ")");
             cbSigns.setText("Signs & icons (" + signsCount + ")");
